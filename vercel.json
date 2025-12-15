@@ -1,4 +1,9 @@
 {
+  "build": {
+    "env": {
+      "VERCEL_PROJECT_BUILD_STEP": "static"
+    }
+  },
   "rewrites": [
     {
       "source": "/",
