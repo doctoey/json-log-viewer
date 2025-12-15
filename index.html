@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ตัวแปลง JSON Log ให้อ่านง่าย</title>
+    <style>
+      body {
+        font-family: "Sarabun", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background-color: #f4f6f8;
+        padding: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+      .container {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 8px;
+      }
+      textarea {
+        width: 100%;
+        height: 150px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        padding: 10px;
+        font-family: monospace;
+        box-sizing: border-box; /* ป้องกันกล่องเกินขอบ */
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+        width: 100%;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      .result-box {
+        margin-top: 20px;
+        background-color: #282c34;
+        color: #abb2bf;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        display: none; /* ซ่อนไว้ก่อน */
+      }
+      pre {
+        margin: 0;
+        font-family: "Consolas", monospace;
+        font-size: 14px;
+      }
+
+      /* สี Syntax Highlight แบบง่ายๆ */
+      .key {
+        color: #e06c75;
+      }
+      .string {
+        color: #98c379;
+      }
+      .number {
+        color: #d19a66;
+      }
+      .boolean {
+        color: #56b6c2;
+      }
+      .null {
+        color: #c678dd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🛠️ แปลง Log ให้อ่านง่าย</h1>
+
+      <label for="inputData">วางข้อความ (String) ที่นี่:</label>
+      <textarea
+        id="inputData"
+        placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}"'
+      ></textarea>
+
+      <button onclick="convertJson()">แปลงข้อมูล</button>
+
+      <div id="resultContainer" class="result-box">
+        <pre id="output"></pre>
+      </div>
+    </div>
+
+    <script>
+      function convertJson() {
+        const input = document.getElementById("inputData").value.trim();
+        const outputDiv = document.getElementById("output");
+        const resultBox = document.getElementById("resultContainer");
+
+        if (!input) {
+          alert("กรุณาวางข้อมูลก่อนครับ");
+          return;
+        }
+
+        try {
+          let parsedData;
+
+          // 1. ลอง Parse รอบแรก (เผื่อ user ก๊อปมาแบบ object อยู่แล้ว)
+          try {
+            parsedData = JSON.parse(input);
+          } catch (e) {
+            // ถ้า Parse ไม่ได้ อาจจะเป็น String ธรรมดาที่ไม่มี quote ครอบ หรือ Format ผิด
+            // ลองแก้เคสเบื้องต้น (เช่น user ลืมใส่ quote ครอบ string)
+            parsedData = input;
+          }
+
+          // 2. เช็คว่าถ้า Parse ออกมาแล้วยังเป็น String (แปลว่าเป็น JSON ซ้อน String แบบในโจทย์)
+          // ให้ Parse อีกรอบ
+          if (typeof parsedData === "string") {
+            // ลบ quote หน้าหลังออกถ้ามี แล้ว unescape
+            try {
+              parsedData = JSON.parse(parsedData);
+            } catch (e) {
+              // ถ้า parse อีกรอบไม่ได้ แสดงว่าเป็น string ธรรมดา หรือ format ผิดจริงๆ
+              throw new Error("Format ไม่ถูกต้อง");
+            }
+          }
+
+          // 3. แสดงผลแบบสวยงาม (Syntax Highlight)
+          const prettyHtml = syntaxHighlight(parsedData);
+          outputDiv.innerHTML = prettyHtml;
+          resultBox.style.display = "block";
+        } catch (error) {
+          alert("เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง\n" + error.message);
+          console.error(error);
+        }
+      }
+
+      // ฟังก์ชันทำสีสันให้อ่านง่าย
+      function syntaxHighlight(json) {
+        if (typeof json != "string") {
+          json = JSON.stringify(json, undefined, 2);
+        }
+        json = json
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+        return json.replace(
+          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+          function (match) {
+            var cls = "number";
+            if (/^"/.test(match)) {
+              if (/:$/.test(match)) {
+                cls = "key";
+              } else {
+                cls = "string";
+              }
+            } else if (/true|false/.test(match)) {
+              cls = "boolean";
+            } else if (/null/.test(match)) {
+              cls = "null";
+            }
+            return '<span class="' + cls + '">' + match + "</span>";
+          }
+        );
+      }
+    </script>
+  </body>
+</html>
