@@ -205,7 +205,10 @@
             id="jsonData"
             placeholder="JSON จะแสดงที่นี่และสามารถแก้ไขได้"
           ></textarea>
-          <button onclick="convertToString()">แปลงเป็น String</button>
+          <div style="display: flex; gap: 8px">
+            <button onclick="formatJson()">จัด JSON</button>
+            <button onclick="convertToString()">แปลงเป็น String</button>
+          </div>
         </div>
       </div>
 
@@ -339,6 +342,27 @@
           .catch(() => {
             alert("ไม่สามารถคัดลอกได้");
           });
+      }
+
+      function formatJson() {
+        const jsonArea = document.getElementById("jsonData");
+        const outputDiv = document.getElementById("output");
+        const resultBox = document.getElementById("resultContainer");
+        const text = jsonArea.value.trim();
+        if (!text) {
+          alert("กรุณาใส่ JSON ในกรอบขวาก่อนครับ");
+          return;
+        }
+        try {
+          const parsed = JSON.parse(text);
+          const pretty = JSON.stringify(parsed, null, 2);
+          jsonArea.value = pretty;
+          outputDiv.innerHTML = syntaxHighlight(parsed);
+          resultBox.style.display = "block";
+        } catch (err) {
+          alert("JSON ไม่ถูกต้อง: \n" + err.message);
+          console.error(err);
+        }
       }
     </script>
   </body>
