@@ -171,6 +171,18 @@
           flex-direction: column;
         }
       }
+      .result-header {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .result-header button {
+        width: auto;
+        padding: 8px 12px;
+        font-size: 13px;
+        margin-top: 0;
+      }
     </style>
   </head>
   <body>
@@ -197,7 +209,12 @@
         </div>
       </div>
 
-      <div id="resultContainer" class="result-box"><pre id="output"></pre></div>
+      <div id="resultContainer" class="result-box">
+        <div class="result-header">
+          <button id="copyBtn" onclick="copyResult()">Copy</button>
+        </div>
+        <pre id="output"></pre>
+      </div>
     </div>
 
     <script>
@@ -288,6 +305,40 @@
           alert("JSON ในกรอบขวาไม่ถูกต้อง: \n" + error.message);
           console.error(error);
         }
+      }
+
+      function copyResult() {
+        const outputDiv = document.getElementById("output");
+        const btn = document.getElementById("copyBtn");
+        if (!outputDiv) return;
+        const text = outputDiv.textContent || "";
+        if (!navigator.clipboard) {
+          // fallback
+          try {
+            const area = document.createElement("textarea");
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand("copy");
+            document.body.removeChild(area);
+            const prev = btn.textContent;
+            btn.textContent = "Copied";
+            setTimeout(() => (btn.textContent = prev), 1500);
+          } catch (e) {
+            alert("ไม่สามารถคัดลอกได้");
+          }
+          return;
+        }
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            const prev = btn.textContent;
+            btn.textContent = "Copied";
+            setTimeout(() => (btn.textContent = prev), 1500);
+          })
+          .catch(() => {
+            alert("ไม่สามารถคัดลอกได้");
+          });
       }
     </script>
   </body>
