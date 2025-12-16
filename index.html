@@ -204,6 +204,8 @@
       function convertJson() {
         const input = document.getElementById("inputData").value.trim();
         const jsonArea = document.getElementById("jsonData");
+        const outputDiv = document.getElementById("output");
+        const resultBox = document.getElementById("resultContainer");
         if (!input) {
           alert("กรุณาวางข้อมูลก่อนครับ");
           return;
@@ -221,11 +223,16 @@
             } catch (e) {
               // not a JSON string: just show quoted string
               jsonArea.value = JSON.stringify(parsed, null, 2);
+              outputDiv.innerHTML = syntaxHighlight(parsed);
+              resultBox.style.display = "block";
               return;
             }
           }
           // Show pretty JSON in editable area
           jsonArea.value = JSON.stringify(parsed, null, 2);
+          // also show highlighted JSON in result box
+          outputDiv.innerHTML = syntaxHighlight(parsed);
+          resultBox.style.display = "block";
         } catch (error) {
           alert("เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง\n" + error.message);
           console.error(error);
@@ -263,6 +270,8 @@
       function convertToString() {
         const jsonText = document.getElementById("jsonData").value.trim();
         const inputArea = document.getElementById("inputData");
+        const outputDiv = document.getElementById("output");
+        const resultBox = document.getElementById("resultContainer");
         if (!jsonText) {
           alert("กรุณาใส่ JSON ในกรอบขวาก่อนครับ");
           return;
@@ -272,6 +281,9 @@
           // produce a compact string suitable for logs
           const compact = JSON.stringify(parsed);
           inputArea.value = compact;
+          // show compact string in result box
+          outputDiv.textContent = compact;
+          resultBox.style.display = "block";
         } catch (error) {
           alert("JSON ในกรอบขวาไม่ถูกต้อง: \n" + error.message);
           console.error(error);
