@@ -7,106 +7,149 @@
     <style>
       :root {
         --bg: #0b1220;
-        --panel: #071021;
-        --muted: #94a3b8;
+        --panel: #071229;
+        --muted: #9aa9bd;
         --text: #e6eef8;
-        --accent: #2563eb;
+        --accent: #3b82f6;
+        --accent-2: #60a5fa;
+        --card-border: rgba(255, 255, 255, 0.035);
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
-        font-family: "Sarabun", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        font-family: "Sarabun", Inter, system-ui, -apple-system, "Segoe UI",
           Roboto, sans-serif;
         background-color: var(--bg);
         color: var(--text);
-        padding: 20px;
-        max-width: 800px;
+        padding: 28px 20px;
+        max-width: 900px;
         margin: 0 auto;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
+
       h1 {
         color: var(--text);
         text-align: center;
+        font-size: 28px;
+        margin: 6px 0 18px;
+        letter-spacing: 0.2px;
       }
+
       .container {
         background: linear-gradient(
           180deg,
-          rgba(255, 255, 255, 0.02),
-          rgba(255, 255, 255, 0.01)
+          rgba(255, 255, 255, 0.01),
+          rgba(255, 255, 255, 0.007)
         );
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 6px 24px rgba(2, 6, 23, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.03);
+        padding: 22px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+        border: 1px solid var(--card-border);
       }
+
       label {
-        font-weight: 600;
         display: block;
-        margin-bottom: 8px;
         color: var(--muted);
+        font-weight: 600;
+        margin-bottom: 8px;
       }
+
       textarea {
         width: 100%;
-        height: 150px;
-        border: 1px solid rgba(255, 255, 255, 0.04);
-        border-radius: 6px;
-        padding: 10px;
-        font-family: monospace;
-        box-sizing: border-box; /* ป้องกันกล่องเกินขอบ */
-        background: #071226;
+        height: 160px;
+        border-radius: 10px;
+        padding: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+          monospace;
+        background: linear-gradient(180deg, #041225, #071226);
         color: var(--text);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        font-size: 13.5px;
+        line-height: 1.45;
         resize: vertical;
       }
       textarea::placeholder {
         color: rgba(230, 238, 248, 0.45);
       }
+
       button {
-        background-color: var(--accent);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        font-size: 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        margin-top: 10px;
+        display: inline-block;
         width: 100%;
+        padding: 12px 18px;
+        border-radius: 10px;
+        border: 0;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        color: #fff;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        margin-top: 12px;
+        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18);
       }
-      button:hover {
-        background-color: #174fcc;
+      button:active {
+        transform: translateY(1px);
       }
 
       .result-box {
         margin-top: 20px;
-        background-color: #061022;
-        color: var(--text);
-        padding: 15px;
-        border-radius: 6px;
-        overflow-x: auto;
-        display: none; /* ซ่อนไว้ก่อน */
-        border: 1px solid rgba(255, 255, 255, 0.03);
+        background: linear-gradient(180deg, #051329, #061225);
+        padding: 18px;
+        border-radius: 10px;
+        overflow: auto;
+        display: none;
+        border: 1px solid var(--card-border);
       }
+
       pre {
         margin: 0;
-        font-family: "Consolas", monospace;
-        font-size: 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+          monospace;
+        font-size: 15px;
         color: var(--text);
+        line-height: 1.6;
         white-space: pre-wrap;
         word-break: break-word;
       }
 
-      /* สี Syntax Highlight แบบสำหรับโหมดมืด */
+      /* improved syntax colors with balanced contrast */
       .key {
-        color: #ff7b72;
+        color: #ffb86b;
+        font-weight: 600;
       }
       .string {
-        color: #73d09d;
+        color: #a3e635;
       }
       .number {
-        color: #f59e0b;
+        color: #ffd57e;
       }
       .boolean {
-        color: #38bdf8;
+        color: #60a5fa;
       }
       .null {
-        color: #a78bfa;
+        color: #c084fc;
+      }
+
+      /* make the JSON block look like a code card */
+      .result-box pre {
+        background: transparent;
+        padding: 0;
+      }
+
+      /* responsive tweaks */
+      @media (max-width: 520px) {
+        h1 {
+          font-size: 20px;
+        }
+        textarea {
+          height: 140px;
+        }
+        pre {
+          font-size: 13px;
+        }
       }
     </style>
   </head>
@@ -145,24 +188,19 @@
           try {
             parsedData = JSON.parse(input);
           } catch (e) {
-            // ถ้า Parse ไม่ได้ อาจจะเป็น String ธรรมดาที่ไม่มี quote ครอบ หรือ Format ผิด
-            // ลองแก้เคสเบื้องต้น (เช่น user ลืมใส่ quote ครอบ string)
             parsedData = input;
           }
 
-          // 2. เช็คว่าถ้า Parse ออกมาแล้วยังเป็น String (แปลว่าเป็น JSON ซ้อน String แบบในโจทย์)
-          // ให้ Parse อีกรอบ
+          // 2. ถ้าเป็น string อีกที ให้ parse ซ้อน
           if (typeof parsedData === "string") {
-            // ลบ quote หน้าหลังออกถ้ามี แล้ว unescape
             try {
               parsedData = JSON.parse(parsedData);
             } catch (e) {
-              // ถ้า parse อีกรอบไม่ได้ แสดงว่าเป็น string ธรรมดา หรือ format ผิดจริงๆ
               throw new Error("Format ไม่ถูกต้อง");
             }
           }
 
-          // 3. แสดงผลแบบสวยงาม (Syntax Highlight)
+          // 3. แสดงผล
           const prettyHtml = syntaxHighlight(parsedData);
           outputDiv.innerHTML = prettyHtml;
           resultBox.style.display = "block";
@@ -172,7 +210,6 @@
         }
       }
 
-      // ฟังก์ชันทำสีสันให้อ่านง่าย
       function syntaxHighlight(json) {
         if (typeof json != "string") {
           json = JSON.stringify(json, undefined, 2);
