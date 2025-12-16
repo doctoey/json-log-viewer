@@ -6,12 +6,12 @@
     <title>ตัวแปลง JSON Log ให้อ่านง่าย</title>
     <style>
       :root {
-        --bg: #0b1220;
-        --panel: #071229;
-        --muted: #9aa9bd;
-        --text: #e6eef8;
-        --accent: #3b82f6;
-        --accent-2: #60a5fa;
+        --bg: #0f1419; /* page background */
+        --panel: #15202b; /* card / panel */
+        --muted: #8899a6; /* labels / helper text */
+        --text: #e6eef8; /* main text */
+        --accent: #1d9bf0; /* primary blue */
+        --accent-2: #2aa7ff; /* lighter blue */
         --card-border: rgba(255, 255, 255, 0.035);
       }
 
@@ -22,7 +22,7 @@
       body {
         font-family: "Sarabun", Inter, system-ui, -apple-system, "Segoe UI",
           Roboto, sans-serif;
-        background-color: var(--bg);
+        background: var(--bg);
         color: var(--text);
         padding: 28px 20px;
         max-width: 900px;
@@ -42,13 +42,14 @@
       .container {
         background: linear-gradient(
           180deg,
-          rgba(255, 255, 255, 0.01),
-          rgba(255, 255, 255, 0.007)
+          rgba(255, 255, 255, 0.012),
+          rgba(255, 255, 255, 0.006)
         );
         padding: 22px;
         border-radius: 12px;
-        box-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
-        border: 1px solid var(--card-border);
+        box-shadow: 0 8px 24px rgba(3, 7, 12, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.02);
+        background-color: var(--panel);
       }
 
       label {
@@ -65,7 +66,7 @@
         padding: 14px;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
           monospace;
-        background: linear-gradient(180deg, #041225, #071226);
+        background: linear-gradient(180deg, #0b1418, var(--panel));
         color: var(--text);
         border: 1px solid rgba(255, 255, 255, 0.03);
         font-size: 13.5px;
@@ -88,7 +89,7 @@
         font-size: 15px;
         cursor: pointer;
         margin-top: 12px;
-        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.18);
+        box-shadow: 0 6px 18px rgba(29, 155, 240, 0.18);
       }
       button:active {
         transform: translateY(1px);
@@ -96,12 +97,12 @@
 
       .result-box {
         margin-top: 20px;
-        background: linear-gradient(180deg, #051329, #061225);
+        background-color: var(--panel);
         padding: 18px;
         border-radius: 10px;
         overflow: auto;
         display: none;
-        border: 1px solid var(--card-border);
+        border: 1px solid rgba(255, 255, 255, 0.02);
       }
 
       pre {
@@ -115,31 +116,29 @@
         word-break: break-word;
       }
 
-      /* improved syntax colors with balanced contrast */
+      /* improved syntax colors with balanced contrast (Twitter dark) */
       .key {
-        color: #e06c75;
-        font-weight: 600;
-      }
+        color: #ff6b6b;
+        font-weight: 700;
+      } /* warm red */
       .string {
-        color: #a3e635;
-      }
+        color: #7ee787;
+      } /* green */
       .number {
-        color: #ffd57e;
-      }
+        color: #ffca6b;
+      } /* yellow */
       .boolean {
-        color: #60a5fa;
-      }
+        color: #1da1f2;
+      } /* blue */
       .null {
-        color: #c084fc;
-      }
+        color: #b085ff;
+      } /* purple */
 
-      /* make the JSON block look like a code card */
       .result-box pre {
         background: transparent;
         padding: 0;
       }
 
-      /* responsive tweaks */
       @media (max-width: 520px) {
         h1 {
           font-size: 20px;
@@ -165,9 +164,7 @@
 
       <button onclick="convertJson()">แปลงข้อมูล</button>
 
-      <div id="resultContainer" class="result-box">
-        <pre id="output"></pre>
-      </div>
+      <div id="resultContainer" class="result-box"><pre id="output"></pre></div>
     </div>
 
     <script>
@@ -175,23 +172,17 @@
         const input = document.getElementById("inputData").value.trim();
         const outputDiv = document.getElementById("output");
         const resultBox = document.getElementById("resultContainer");
-
         if (!input) {
           alert("กรุณาวางข้อมูลก่อนครับ");
           return;
         }
-
         try {
           let parsedData;
-
-          // 1. ลอง Parse รอบแรก (เผื่อ user ก๊อปมาแบบ object อยู่แล้ว)
           try {
             parsedData = JSON.parse(input);
           } catch (e) {
             parsedData = input;
           }
-
-          // 2. ถ้าเป็น string อีกที ให้ parse ซ้อน
           if (typeof parsedData === "string") {
             try {
               parsedData = JSON.parse(parsedData);
@@ -199,8 +190,6 @@
               throw new Error("Format ไม่ถูกต้อง");
             }
           }
-
-          // 3. แสดงผล
           const prettyHtml = syntaxHighlight(parsedData);
           outputDiv.innerHTML = prettyHtml;
           resultBox.style.display = "block";
