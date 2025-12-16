@@ -1,3 +1,32 @@
+<script>
+  window.addEventListener("DOMContentLoaded", function () {
+    const inputArea = document.getElementById("inputData");
+    if (!inputArea) return;
+    inputArea.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      inputArea.style.borderColor = "#1d9bf0";
+    });
+    inputArea.addEventListener("dragleave", (e) => {
+      inputArea.style.borderColor = "";
+    });
+    inputArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+      inputArea.style.borderColor = "";
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (evt) {
+          inputArea.value = evt.target.result;
+          convertJson(true);
+        };
+        reader.readAsText(file);
+      }
+    });
+    inputArea.addEventListener("paste", function (e) {
+      setTimeout(() => convertJson(true), 10);
+    });
+  });
+</script>
 <!DOCTYPE html>
 <html lang="th">
   <head>
@@ -6,12 +35,12 @@
     <title>ตัวแปลง JSON Log ให้อ่านง่าย</title>
     <style>
       :root {
-        --bg: #0f1419; /* page background */
-        --panel: #15202b; /* card / panel */
-        --muted: #8899a6; /* labels / helper text */
-        --text: #e6eef8; /* main text */
-        --accent: #1d9bf0; /* primary blue */
-        --accent-2: #2aa7ff; /* lighter blue */
+        --bg: #0f1419;
+        --panel: #15202b;
+        --muted: #8899a6;
+        --text: #e6eef8;
+        --accent: #1d9bf0;
+        --accent-2: #2aa7ff;
         --card-border: rgba(255, 255, 255, 0.035);
       }
 
@@ -22,11 +51,11 @@
       body {
         font-family: "Sarabun", Inter, system-ui, -apple-system, "Segoe UI",
           Roboto, sans-serif;
-        background: var(--bg);
+        background: linear-gradient(120deg, #0f1419 0%, #1d2636 100%);
         color: var(--text);
-        padding: 28px 20px;
-        max-width: 900px;
-        margin: 0 auto;
+        padding: 28px 0;
+        min-height: 100vh;
+        margin: 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
@@ -34,23 +63,35 @@
       h1 {
         color: var(--text);
         text-align: center;
-        font-size: 28px;
-        margin: 6px 0 18px;
+        font-size: 2.2rem;
+        margin: 10px 0 28px;
         letter-spacing: 0.2px;
+        font-weight: 800;
+        text-shadow: 0 2px 12px rgba(29,155,240,0.10);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
       }
 
       .container {
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.012),
-          rgba(255, 255, 255, 0.006)
-        );
-        padding: 22px;
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(3, 7, 12, 0.6);
-        border: 1px solid rgba(255, 255, 255, 0.02);
+        background: linear-gradient(120deg, rgba(29,155,240,0.13) 0%, rgba(21,32,43,0.98) 100%);
+        padding: 40px 36px 36px 36px;
+        border-radius: 32px;
+        box-shadow: 0 16px 48px 0 rgba(29,155,240,0.16), 0 2px 12px 0 rgba(0,0,0,0.13);
+        border: 1.5px solid rgba(255,255,255,0.11);
         background-color: var(--panel);
+        margin-top: 48px;
+        max-width: 980px;
+        margin-left: auto;
+        margin-right: auto;
+        backdrop-filter: blur(18px) saturate(1.25);
+        -webkit-backdrop-filter: blur(18px) saturate(1.25);
+        position: relative;
+        transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
       }
+
+      
 
       label {
         display: block;
@@ -59,80 +100,192 @@
         margin-bottom: 8px;
       }
 
+      .pane-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .toolbar-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .tool-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: rgba(255,255,255,0.03);
+        color: var(--text);
+        border: 1px solid rgba(255,255,255,0.03);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 13px;
+        transition: background 0.12s, transform 0.08s, box-shadow 0.12s;
+      }
+      .tool-btn svg { width: 14px; height: 14px; }
+      .tool-btn:hover {
+        background: rgba(29,155,240,0.08);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(29,155,240,0.06);
+      }
+      .pane.collapsed textarea,
+      .pane.collapsed .example-text,
+      .pane.collapsed .pane-controls {
+        display: none;
+      }
+      
+
+
+      .editor-row {
+        display: flex;
+        gap: 28px;
+        margin-top: 18px;
+        position: relative;
+        justify-content: center;
+      }
+
+      .pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgba(255,255,255,0.04);
+        border-radius: 20px;
+        padding: 32px 24px 22px 24px;
+        box-shadow: 0 2px 12px 0 rgba(29,155,240,0.09);
+        border: 1.5px solid rgba(29,155,240,0.09);
+        position: relative;
+        z-index: 2;
+        max-width: 440px;
+        min-width: 0;
+        transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
+      }
+
       textarea {
         width: 100%;
-        height: 160px;
-        border-radius: 10px;
-        padding: 14px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
-          monospace;
-        background: linear-gradient(180deg, #0b1418, var(--panel));
+        height: 200px;
+        border-radius: 12px;
+        padding: 16px 14px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        background: linear-gradient(120deg, #10171d 0%, #1a2836 100%);
         color: var(--text);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        font-size: 13.5px;
-        line-height: 1.45;
+        border: 1.5px solid rgba(29,155,240,0.13);
+        font-size: 14px;
+        line-height: 1.55;
         resize: vertical;
+        box-shadow: 0 1px 4px 0 rgba(29,155,240,0.04);
+        transition: border 0.2s, box-shadow 0.2s;
+        backdrop-filter: blur(2px);
       }
-      textarea::placeholder {
-        color: rgba(230, 238, 248, 0.45);
+      textarea:focus {
+        outline: none;
+        border: 2.5px solid var(--accent-2);
+        box-shadow: 0 0 0 4px rgba(29,155,240,0.18);
+        background: linear-gradient(120deg, #16202a 0%, #1a2836 100%);
       }
 
       button {
         display: inline-block;
-        width: 100%;
-        padding: 12px 18px;
-        border-radius: 10px;
+        width: auto;
+        min-width: 120px;
+        padding: 12px 22px;
+        border-radius: 999px;
         border: 0;
         background: linear-gradient(90deg, var(--accent), var(--accent-2));
         color: #fff;
         font-weight: 700;
-        font-size: 15px;
+        font-size: 14px;
         cursor: pointer;
-        margin-top: 12px;
-        box-shadow: 0 6px 18px rgba(29, 155, 240, 0.18);
+        margin-top: 16px;
+        margin-bottom: 0;
+        box-shadow: 0 4px 16px rgba(29, 155, 240, 0.13);
+        transition: background 0.18s, box-shadow 0.18s, transform 0.12s, filter 0.18s;
+        filter: drop-shadow(0 2px 8px rgba(29,155,240,0.10));
+        position: relative;
+        overflow: hidden;
+      }
+      button:after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255,255,255,0.18);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.3s, height 0.3s, opacity 0.3s;
+        opacity: 0;
+        z-index: 0;
+      }
+      button:active:after {
+        width: 180%;
+        height: 400%;
+        opacity: 0.18;
+        transition: 0s;
+      }
+      button:hover,
+      button:focus {
+        background: linear-gradient(90deg, var(--accent-2), var(--accent));
+        box-shadow: 0 6px 24px rgba(29, 155, 240, 0.18);
+        transform: translateY(-1px) scale(1.03);
+        filter: drop-shadow(0 4px 16px rgba(29,155,240,0.13));
       }
       button:active {
-        transform: translateY(1px);
+        transform: translateY(1px) scale(0.98);
       }
 
+      .pane-controls { display: flex; gap: 8px; align-items: center }
+
       .result-box {
-        margin-top: 20px;
-        background-color: var(--panel);
-        padding: 18px;
-        border-radius: 10px;
+        margin-top: 28px;
+        background: linear-gradient(120deg, rgba(29,155,240,0.13) 0%, rgba(21,32,43,0.98) 100%);
+        padding: 24px 18px 18px 18px;
+        border-radius: 18px;
         overflow: auto;
         display: none;
-        border: 1px solid rgba(255, 255, 255, 0.02);
+        border: 1.5px solid rgba(29,155,240,0.13);
+        box-shadow: 0 4px 18px 0 rgba(29,155,240,0.13);
+        transition: box-shadow 0.3s, background 0.3s;
+        animation: fadeinResult 0.5s;
+      }
+      @keyframes fadeinResult {
+        from { opacity: 0; transform: translateY(16px) scale(0.98); }
+        to { opacity: 1; transform: none; }
       }
 
       pre {
         margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
-          monospace;
-        font-size: 15px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        font-size: 12px;
         color: var(--text);
-        line-height: 1.6;
+        line-height: 1.7;
         white-space: pre-wrap;
         word-break: break-word;
+        background: none;
+        transition: color 0.2s;
       }
 
-      /* improved syntax colors with balanced contrast (Twitter dark) */
+      
       .key {
         color: #ff6b6b;
         font-weight: 700;
-      } /* warm red */
+      }
       .string {
         color: #7ee787;
-      } /* green */
+      }
       .number {
         color: #ffca6b;
-      } /* yellow */
+      }
       .boolean {
         color: #1da1f2;
-      } /* blue */
+      }
       .null {
         color: #b085ff;
-      } /* purple */
+      }
 
       .result-box pre {
         background: transparent;
@@ -144,38 +297,50 @@
           font-size: 20px;
         }
         textarea {
-          height: 140px;
+          height: 120px;
         }
+        .tool-btn { padding: 12px 14px; min-height: 44px; }
+        .btn-optional { display: none; }
         pre {
           font-size: 13px;
         }
-      }
-      .editor-row {
-        display: flex;
-        gap: 14px;
-        margin-top: 6px;
-      }
-      .pane {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-      .pane button {
-        margin-top: 10px;
-        width: auto;
-        align-self: stretch;
+        .container {
+          padding: 10px 2vw 10px 2vw;
+        }
+        .pane {
+          padding: 8px 2vw 8px 2vw;
+        }
+        .editor-row {
+          gap: 0;
+        }
+        
       }
 
-      @media (max-width: 820px) {
+      @media (max-width: 640px) {
         .editor-row {
           flex-direction: column;
         }
       }
+
+      @media (max-width: 900px) and (min-width: 641px) {
+        .container {
+          padding-left: 2vw;
+          padding-right: 2vw;
+        }
+        .editor-row {
+          gap: 8px;
+        }
+        .pane {
+          max-width: 360px;
+        }
+      }
+
       .result-header {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
         gap: 8px;
         margin-bottom: 8px;
+        align-items: center;
       }
       .result-header button {
         width: auto;
@@ -183,78 +348,208 @@
         font-size: 13px;
         margin-top: 0;
       }
+      .result-status {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .result-status.error {
+        color: #ff6b6b;
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>🛠️ แปลง Log ให้อ่านง่าย</h1>
+      <h1>
+        <span style="display:inline-flex;align-items:center;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="margin-right:8px;vertical-align:middle;">
+            <rect x="3" y="3" width="18" height="18" rx="4" fill="#1d9bf0" fill-opacity="0.18"/>
+            <path d="M8 16l8-8M8 8h8v8" stroke="#1d9bf0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        แปลง Log ให้อ่านง่าย
+      </h1>
 
       <div class="editor-row">
         <div class="pane">
-          <label for="inputData">วางข้อความ (String) ที่นี่:</label>
+          <label
+            for="inputData"
+            title="วางข้อความ JSON string ที่ escape หรือ JSON ปกติ"
+            ><span style="display:inline-flex;align-items:center;vertical-align:middle;margin-right:4px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
+                <rect x="3" y="3" width="18" height="18" rx="4" fill="#7ee787" fill-opacity="0.18"/>
+                <path d="M7 8h10M7 12h10M7 16h6" stroke="#7ee787" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>วางข้อความ (String) ที่นี่:</label
+          >
+          <div class="pane-toolbar">
+            <div></div>
+            <div class="toolbar-actions">
+              <button class="tool-btn" onclick="copyPane('inputData')" title="คัดลอกข้อความ"> 
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 9h6v6H9z" fill="#1d9bf0"/></svg>
+                Copy
+              </button>
+              <button class="tool-btn" onclick="togglePaneCollapse('inputData')" title="ย่อ/ขยาย"> 
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Collapse
+              </button>
+            </div>
+          </div>
           <textarea
             id="inputData"
-            placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}"'
+            placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}" หรือ {"log":{...}}'
+            aria-describedby="inputDataHelp"
           ></textarea>
-          <button onclick="convertJson()">แปลงเป็น JSON</button>
+          <div
+            id="inputDataHelp"
+            class="example-text"
+            style="color: #7ee787; font-size: 13px; margin: 4px 0 8px 0"
+          >
+            <b>ตัวอย่าง:</b> <br />
+            <span style="color: #ffca6b">String escape:</span>
+            <span style="font-family: monospace"
+              >"{\"log\":{\"event\":\"Clicks tab\"}}"</span
+            ><br />
+            <span style="color: #1da1f2">JSON ปกติ:</span>
+            <span style="font-family: monospace"
+              >{"log":{"event":"Clicks tab"}}</span
+            >
+          </div>
+            
+            <div class="pane">
+          <button
+            onclick="convertJson()"
+            title="แปลงข้อความเป็น JSON ที่อ่านง่าย"
+          >
+            แปลงเป็น JSON
+          </button>
         </div>
 
         <div class="pane">
-          <label for="jsonData">JSON (แก้ไขได้):</label>
+          <label for="jsonData" title="แก้ไข JSON ได้โดยตรง"
+            ><span style="display:inline-flex;align-items:center;vertical-align:middle;margin-right:4px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
+                <rect x="3" y="3" width="18" height="18" rx="4" fill="#ffca6b" fill-opacity="0.18"/>
+                <path d="M7 8h10M7 12h6M7 16h10" stroke="#ffca6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>JSON (แก้ไขได้):</label
+          >
+          <div class="pane-toolbar">
+            <div></div>
+            <div class="toolbar-actions">
+              <button class="tool-btn" onclick="formatJson()" title="จัดรูปแบบ JSON"> 
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h12M6 12h12M6 18h8" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Format
+              </button>
+              <button class="tool-btn" onclick="copyPane('jsonData')" title="คัดลอก JSON"> 
+                <svg viewBox="0 0 24 24" fill="none"><path d="M9 9h6v6H9z" fill="#1d9bf0"/></svg>
+                Copy
+              </button>
+              <button class="tool-btn" onclick="togglePaneCollapse('jsonData')" title="ย่อ/ขยาย"> 
+                <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Collapse
+              </button>
+            </div>
+          </div>
           <textarea
             id="jsonData"
             placeholder="JSON จะแสดงที่นี่และสามารถแก้ไขได้"
+            aria-describedby="jsonDataHelp"
           ></textarea>
-          <div style="display: flex; gap: 8px">
-            <button onclick="formatJson()">จัด JSON</button>
-            <button onclick="convertToString()">แปลงเป็น String</button>
+          <div
+            id="jsonDataHelp"
+            class="example-text"
+            style="color: #7ee787; font-size: 13px; margin: 4px 0 8px 0"
+          >
+            <b>ตัวอย่าง:</b>
+            <span style="font-family: monospace"
+              >{"log":{"event":"Clicks tab"}}</span
+            >
+          </div>
+          <div class="pane-controls">
+            <button onclick="formatJson()" title="จัดรูปแบบ JSON ให้สวยงาม">
+              จัด JSON
+            </button>
+            <button
+              onclick="convertToString()"
+              title="แปลง JSON เป็น string escape"
+            >
+              แปลงเป็น String
+            </button>
           </div>
         </div>
       </div>
 
       <div id="resultContainer" class="result-box">
         <div class="result-header">
-          <button id="copyBtn" onclick="copyResult()">Copy</button>
+          <div id="status" class="result-status"></div>
+          <div style="display: flex; gap: 8px; align-items: center">
+            <button id="copyBtn" onclick="copyResult()" class="tool-btn" style="display:inline-flex;align-items:center;gap:6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
+                <rect x="7" y="7" width="10" height="10" rx="2" fill="#1d9bf0" fill-opacity="0.18"/>
+                <rect x="3" y="3" width="14" height="14" rx="2" stroke="#1d9bf0" stroke-width="2"/>
+                <path d="M9 9h6v6H9z" fill="#1d9bf0" fill-opacity="0.13"/>
+              </svg>
+              Copy
+            </button>
+            <button class="tool-btn" onclick="togglePaneCollapse('resultContainer')" title="ย่อ/ขยายผลลัพธ์">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Collapse
+            </button>
+          </div>
         </div>
         <pre id="output"></pre>
       </div>
     </div>
 
     <script>
-      function convertJson() {
+      function convertJson(auto) {
         const input = document.getElementById("inputData").value.trim();
         const jsonArea = document.getElementById("jsonData");
         const outputDiv = document.getElementById("output");
         const resultBox = document.getElementById("resultContainer");
+        const status = document.getElementById("status");
         if (!input) {
-          alert("กรุณาวางข้อมูลก่อนครับ");
+          if (!auto) setStatus("กรุณาวางข้อมูลก่อนครับ", true);
           return;
         }
         try {
           let parsed;
+          // auto-detect: try parse as JSON, if fail, try parse as string then JSON
           try {
             parsed = JSON.parse(input);
           } catch (e) {
-            parsed = input;
+            // try parse as string escape
+            if (/^".*"$/.test(input) || input.includes('\\"')) {
+              try {
+                parsed = JSON.parse(JSON.parse(input));
+              } catch (e2) {
+                parsed = input;
+              }
+            } else {
+              parsed = input;
+            }
           }
           if (typeof parsed === "string") {
             try {
               parsed = JSON.parse(parsed);
             } catch (e) {
-              // not a JSON string: just show quoted string
               jsonArea.value = JSON.stringify(parsed, null, 2);
               outputDiv.innerHTML = syntaxHighlight(parsed);
               resultBox.style.display = "block";
+              if (!auto) setStatus("แสดงผล JSON แล้ว");
               return;
             }
           }
-          // Show pretty JSON in editable area
           jsonArea.value = JSON.stringify(parsed, null, 2);
-          // also show highlighted JSON in result box
           outputDiv.innerHTML = syntaxHighlight(parsed);
           resultBox.style.display = "block";
+          if (!auto) setStatus("แสดงผล JSON แล้ว");
         } catch (error) {
-          alert("เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง\n" + error.message);
+          if (!auto)
+            setStatus(
+              "เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง — " + error.message,
+              true
+            );
           console.error(error);
         }
       }
@@ -292,20 +587,20 @@
         const inputArea = document.getElementById("inputData");
         const outputDiv = document.getElementById("output");
         const resultBox = document.getElementById("resultContainer");
+        const status = document.getElementById("status");
         if (!jsonText) {
-          alert("กรุณาใส่ JSON ในกรอบขวาก่อนครับ");
+          setStatus("กรุณาใส่ JSON ในกรอบขวาก่อนครับ", true);
           return;
         }
         try {
           const parsed = JSON.parse(jsonText);
-          // produce a compact string suitable for logs
-          const compact = JSON.stringify(parsed);
-          inputArea.value = compact;
-          // show compact string in result box
-          outputDiv.textContent = compact;
+          const result = JSON.stringify(parsed);
+          inputArea.value = result;
+          outputDiv.textContent = result;
           resultBox.style.display = "block";
+          setStatus("แปลงเป็น String แล้ว");
         } catch (error) {
-          alert("JSON ในกรอบขวาไม่ถูกต้อง: \n" + error.message);
+          setStatus("JSON ในกรอบขวาไม่ถูกต้อง: " + error.message, true);
           console.error(error);
         }
       }
@@ -344,6 +639,54 @@
           });
       }
 
+      function copyPane(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const text = el.value !== undefined ? el.value : el.textContent || "";
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => setStatus("คัดลอกแล้ว"));
+        } else {
+          try {
+            const area = document.createElement("textarea");
+            area.value = text;
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand("copy");
+            document.body.removeChild(area);
+            setStatus("คัดลอกแล้ว");
+          } catch (e) {
+            setStatus("คัดลอกไม่สำเร็จ", true);
+          }
+        }
+      }
+
+      function togglePaneCollapse(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // find closest .pane container
+        let pane = el.closest && el.closest('.pane');
+        if (!pane) pane = el;
+        pane.classList.toggle('collapsed');
+      }
+
+      
+
+      function setStatus(message, isError) {
+        const status = document.getElementById("status");
+        const resultBox = document.getElementById("resultContainer");
+        if (!status) return;
+        status.textContent = message;
+        if (isError) status.classList.add("error");
+        else status.classList.remove("error");
+        // ensure result area is visible so status is seen
+        if (resultBox) resultBox.style.display = "block";
+        // clear non-error messages after 3s
+        if (!isError) {
+          clearTimeout(setStatus._t);
+          setStatus._t = setTimeout(() => (status.textContent = ""), 3000);
+        }
+      }
+
       function formatJson() {
         const jsonArea = document.getElementById("jsonData");
         const outputDiv = document.getElementById("output");
@@ -355,14 +698,53 @@
         }
         try {
           const parsed = JSON.parse(text);
-          const pretty = JSON.stringify(parsed, null, 2);
+          const pretty = customJsonFormat(parsed, 2);
           jsonArea.value = pretty;
           outputDiv.innerHTML = syntaxHighlight(parsed);
           resultBox.style.display = "block";
+          setStatus("จัด JSON แล้ว");
         } catch (err) {
-          alert("JSON ไม่ถูกต้อง: \n" + err.message);
+          setStatus("JSON ไม่ถูกต้อง: " + err.message, true);
           console.error(err);
         }
+      }
+
+      // Custom pretty print like jsonformatter.org
+      function customJsonFormat(obj, indent = 2) {
+        const gap = " ".repeat(indent);
+        function format(val, level) {
+          if (val === null) return "null";
+          if (typeof val === "number" || typeof val === "boolean")
+            return String(val);
+          if (typeof val === "string") return JSON.stringify(val);
+          if (Array.isArray(val)) {
+            if (val.length === 0) return "[]";
+            let out = "[\n";
+            for (let i = 0; i < val.length; i++) {
+              out += gap.repeat(level + 1) + format(val[i], level + 1);
+              if (i < val.length - 1) out += ",";
+              out += "\n";
+            }
+            out += gap.repeat(level) + "]";
+            return out;
+          }
+          // object
+          const keys = Object.keys(val);
+          if (keys.length === 0) return "{}";
+          let out = "{\n";
+          keys.forEach((k, i) => {
+            out +=
+              gap.repeat(level + 1) +
+              JSON.stringify(k) +
+              ": " +
+              format(val[k], level + 1);
+            if (i < keys.length - 1) out += ",";
+            out += "\n";
+          });
+          out += gap.repeat(level) + "}";
+          return out;
+        }
+        return format(obj, 0);
       }
     </script>
   </body>
