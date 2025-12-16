@@ -150,20 +150,52 @@
           font-size: 13px;
         }
       }
+      .editor-row {
+        display: flex;
+        gap: 14px;
+        margin-top: 6px;
+      }
+      .pane {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .pane button {
+        margin-top: 10px;
+        width: auto;
+        align-self: stretch;
+      }
+
+      @media (max-width: 820px) {
+        .editor-row {
+          flex-direction: column;
+        }
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>🛠️ แปลง Log ให้อ่านง่าย</h1>
 
-      <label for="inputData">วางข้อความ (String) ที่นี่:</label>
-      <textarea
-        id="inputData"
-        placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}"'
-      ></textarea>
+      <div class="editor-row">
+        <div class="pane">
+          <label for="inputData">วางข้อความ (String) ที่นี่:</label>
+          <textarea
+            id="inputData"
+            placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}"'
+          ></textarea>
+          <button onclick="convertJson()">แปลงเป็น JSON</button>
+        </div>
 
-      <button onclick="convertJson()">แปลงข้อมูล</button>
-      <button onclick="convertToString()">แปลงเป็น String</button>
+        <div class="pane">
+          <label for="jsonData">JSON (แก้ไขได้):</label>
+          <textarea
+            id="jsonData"
+            placeholder="JSON จะแสดงที่นี่และสามารถแก้ไขได้"
+          ></textarea>
+          <button onclick="convertToString()">แปลงเป็น String</button>
+        </div>
+      </div>
 
       <div id="resultContainer" class="result-box"><pre id="output"></pre></div>
     </div>
@@ -171,29 +203,29 @@
     <script>
       function convertJson() {
         const input = document.getElementById("inputData").value.trim();
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
+        const jsonArea = document.getElementById("jsonData");
         if (!input) {
           alert("กรุณาวางข้อมูลก่อนครับ");
           return;
         }
         try {
-          let parsedData;
+          let parsed;
           try {
-            parsedData = JSON.parse(input);
+            parsed = JSON.parse(input);
           } catch (e) {
-            parsedData = input;
+            parsed = input;
           }
-          if (typeof parsedData === "string") {
+          if (typeof parsed === "string") {
             try {
-              parsedData = JSON.parse(parsedData);
+              parsed = JSON.parse(parsed);
             } catch (e) {
-              throw new Error("Format ไม่ถูกต้อง");
+              // not a JSON string: just show quoted string
+              jsonArea.value = JSON.stringify(parsed, null, 2);
+              return;
             }
           }
-          const prettyHtml = syntaxHighlight(parsedData);
-          outputDiv.innerHTML = prettyHtml;
-          resultBox.style.display = "block";
+          // Show pretty JSON in editable area
+          jsonArea.value = JSON.stringify(parsed, null, 2);
         } catch (error) {
           alert("เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง\n" + error.message);
           console.error(error);
@@ -229,37 +261,19 @@
       }
 
       function convertToString() {
-        const input = document.getElementById("inputData").value.trim();
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
-        if (!input) {
-          alert("กรุณาวางข้อมูลก่อนครับ");
+        const jsonText = document.getElementById("jsonData").value.trim();
+        const inputArea = document.getElementById("inputData");
+        if (!jsonText) {
+          alert("กรุณาใส่ JSON ในกรอบขวาก่อนครับ");
           return;
         }
         try {
-          let parsed;
-          try {
-            parsed = JSON.parse(input);
-          } catch (e) {
-            parsed = input;
-          }
-          if (typeof parsed === "string") {
-            try {
-              parsed = JSON.parse(parsed);
-            } catch (e) {
-              // input is a plain string, output its JSON-escaped representation
-              outputDiv.textContent = JSON.stringify(parsed);
-              resultBox.style.display = "block";
-              return;
-            }
-          }
-
-          // parsed is now an object/array — produce a compact JSON string
-          const jsonString = JSON.stringify(parsed);
-          outputDiv.textContent = jsonString;
-          resultBox.style.display = "block";
+          const parsed = JSON.parse(jsonText);
+          // produce a compact string suitable for logs
+          const compact = JSON.stringify(parsed);
+          inputArea.value = compact;
         } catch (error) {
-          alert("เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง\n" + error.message);
+          alert("JSON ในกรอบขวาไม่ถูกต้อง: \n" + error.message);
           console.error(error);
         }
       }
