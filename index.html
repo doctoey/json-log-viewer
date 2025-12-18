@@ -1,30 +1,64 @@
 <script>
   window.addEventListener("DOMContentLoaded", function () {
+    // For inputData (ปกติ)
     const inputArea = document.getElementById("inputData");
-    if (!inputArea) return;
-    inputArea.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      inputArea.style.borderColor = "#1d9bf0";
-    });
-    inputArea.addEventListener("dragleave", (e) => {
-      inputArea.style.borderColor = "";
-    });
-    inputArea.addEventListener("drop", (e) => {
-      e.preventDefault();
-      inputArea.style.borderColor = "";
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (evt) {
-          inputArea.value = evt.target.result;
-          convertJson(true);
-        };
-        reader.readAsText(file);
-      }
-    });
-    inputArea.addEventListener("paste", function (e) {
-      setTimeout(() => convertJson(true), 10);
-    });
+    if (inputArea) {
+      inputArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        inputArea.style.borderColor = "#1d9bf0";
+      });
+      inputArea.addEventListener("dragleave", (e) => {
+        inputArea.style.borderColor = "";
+      });
+      inputArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        inputArea.style.borderColor = "";
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            inputArea.value = evt.target.result;
+            convertJson(true);
+          };
+          reader.readAsText(file);
+        }
+      });
+      inputArea.addEventListener("paste", function (e) {
+        setTimeout(() => convertJson(true), 10);
+      });
+    }
+
+    // For inputNested (JSON ซ้อน)
+    const inputNested = document.getElementById("inputNested");
+    if (inputNested) {
+      inputNested.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        inputNested.style.borderColor = "#1d9bf0";
+      });
+      inputNested.addEventListener("dragleave", (e) => {
+        inputNested.style.borderColor = "";
+      });
+      inputNested.addEventListener("drop", (e) => {
+        e.preventDefault();
+        inputNested.style.borderColor = "";
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (evt) {
+            inputNested.value = evt.target.result;
+            convertNestedJson(true);
+          };
+          reader.readAsText(file);
+        }
+      });
+      inputNested.addEventListener("paste", function (e) {
+        setTimeout(() => convertNestedJson(true), 10);
+      });
+      inputNested.addEventListener("input", function (e) {
+        // auto convert on typing, but only if user is not deleting
+        setTimeout(() => convertNestedJson(true), 10);
+      });
+    }
   });
 </script>
 <!DOCTYPE html>
@@ -67,7 +101,7 @@
         margin: 10px 0 28px;
         letter-spacing: 0.2px;
         font-weight: 800;
-        text-shadow: 0 2px 12px rgba(29,155,240,0.10);
+        text-shadow: 0 2px 12px rgba(29, 155, 240, 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -75,14 +109,19 @@
       }
 
       .container {
-        background: linear-gradient(120deg, rgba(29,155,240,0.13) 0%, rgba(21,32,43,0.98) 100%);
+        background: linear-gradient(
+          120deg,
+          rgba(29, 155, 240, 0.13) 0%,
+          rgba(21, 32, 43, 0.98) 100%
+        );
         padding: 40px 36px 36px 36px;
         border-radius: 32px;
-        box-shadow: 0 16px 48px 0 rgba(29,155,240,0.16), 0 2px 12px 0 rgba(0,0,0,0.13);
-        border: 1.5px solid rgba(255,255,255,0.11);
+        box-shadow: 0 16px 48px 0 rgba(29, 155, 240, 0.16),
+          0 2px 12px 0 rgba(0, 0, 0, 0.13);
+        border: 1.5px solid rgba(255, 255, 255, 0.11);
         background-color: var(--panel);
         margin-top: 48px;
-        max-width: 980px;
+        max-width: 1200px;
         margin-left: auto;
         margin-right: auto;
         backdrop-filter: blur(18px) saturate(1.25);
@@ -90,8 +129,6 @@
         position: relative;
         transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
       }
-
-      
 
       label {
         display: block;
@@ -118,19 +155,31 @@
         gap: 8px;
         padding: 8px 12px;
         border-radius: 10px;
-        background: rgba(255,255,255,0.03);
+        background: rgba(255, 255, 255, 0.03);
         color: var(--text);
-        border: 1px solid rgba(255,255,255,0.03);
+        border: 1px solid rgba(255, 255, 255, 0.03);
         cursor: pointer;
         font-weight: 600;
         font-size: 13px;
         transition: background 0.12s, transform 0.08s, box-shadow 0.12s;
+        z-index: 10;
       }
-      .tool-btn svg { width: 14px; height: 14px; }
+      .tool-btn svg {
+        width: 14px;
+        height: 14px;
+      }
       .tool-btn:hover {
-        background: rgba(29,155,240,0.08);
+        background: rgba(29, 155, 240, 0.08);
         transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(29,155,240,0.06);
+        box-shadow: 0 6px 18px rgba(29, 155, 240, 0.06);
+      }
+      .collapse-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 20;
+        background: rgba(21, 32, 43, 0.92);
+        box-shadow: 0 2px 8px rgba(29, 155, 240, 0.08);
       }
       .pane.collapsed textarea,
       .pane.collapsed .example-text,
@@ -150,11 +199,11 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: rgba(255,255,255,0.04);
+        background: rgba(255, 255, 255, 0.04);
         border-radius: 20px;
         padding: 32px 24px 22px 24px;
-        box-shadow: 0 2px 12px 0 rgba(29,155,240,0.09);
-        border: 1.5px solid rgba(29,155,240,0.09);
+        box-shadow: 0 2px 12px 0 rgba(29, 155, 240, 0.09);
+        border: 1.5px solid rgba(29, 155, 240, 0.09);
         position: relative;
         z-index: 2;
         max-width: 440px;
@@ -167,21 +216,22 @@
         height: 200px;
         border-radius: 12px;
         padding: 16px 14px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+          monospace;
         background: linear-gradient(120deg, #10171d 0%, #1a2836 100%);
         color: var(--text);
-        border: 1.5px solid rgba(29,155,240,0.13);
+        border: 1.5px solid rgba(29, 155, 240, 0.13);
         font-size: 14px;
         line-height: 1.55;
         resize: vertical;
-        box-shadow: 0 1px 4px 0 rgba(29,155,240,0.04);
+        box-shadow: 0 1px 4px 0 rgba(29, 155, 240, 0.04);
         transition: border 0.2s, box-shadow 0.2s;
         backdrop-filter: blur(2px);
       }
       textarea:focus {
         outline: none;
         border: 2.5px solid var(--accent-2);
-        box-shadow: 0 0 0 4px rgba(29,155,240,0.18);
+        box-shadow: 0 0 0 4px rgba(29, 155, 240, 0.18);
         background: linear-gradient(120deg, #16202a 0%, #1a2836 100%);
       }
 
@@ -200,8 +250,9 @@
         margin-top: 16px;
         margin-bottom: 0;
         box-shadow: 0 4px 16px rgba(29, 155, 240, 0.13);
-        transition: background 0.18s, box-shadow 0.18s, transform 0.12s, filter 0.18s;
-        filter: drop-shadow(0 2px 8px rgba(29,155,240,0.10));
+        transition: background 0.18s, box-shadow 0.18s, transform 0.12s,
+          filter 0.18s;
+        filter: drop-shadow(0 2px 8px rgba(29, 155, 240, 0.1));
         position: relative;
         overflow: hidden;
       }
@@ -212,7 +263,7 @@
         top: 50%;
         width: 0;
         height: 0;
-        background: rgba(255,255,255,0.18);
+        background: rgba(255, 255, 255, 0.18);
         border-radius: 50%;
         transform: translate(-50%, -50%);
         transition: width 0.3s, height 0.3s, opacity 0.3s;
@@ -230,34 +281,49 @@
         background: linear-gradient(90deg, var(--accent-2), var(--accent));
         box-shadow: 0 6px 24px rgba(29, 155, 240, 0.18);
         transform: translateY(-1px) scale(1.03);
-        filter: drop-shadow(0 4px 16px rgba(29,155,240,0.13));
+        filter: drop-shadow(0 4px 16px rgba(29, 155, 240, 0.13));
       }
       button:active {
         transform: translateY(1px) scale(0.98);
       }
 
-      .pane-controls { display: flex; gap: 8px; align-items: center }
+      .pane-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
 
       .result-box {
         margin-top: 28px;
-        background: linear-gradient(120deg, rgba(29,155,240,0.13) 0%, rgba(21,32,43,0.98) 100%);
+        background: linear-gradient(
+          120deg,
+          rgba(29, 155, 240, 0.13) 0%,
+          rgba(21, 32, 43, 0.98) 100%
+        );
         padding: 24px 18px 18px 18px;
         border-radius: 18px;
         overflow: auto;
         display: none;
-        border: 1.5px solid rgba(29,155,240,0.13);
-        box-shadow: 0 4px 18px 0 rgba(29,155,240,0.13);
+        border: 1.5px solid rgba(29, 155, 240, 0.13);
+        box-shadow: 0 4px 18px 0 rgba(29, 155, 240, 0.13);
         transition: box-shadow 0.3s, background 0.3s;
         animation: fadeinResult 0.5s;
       }
       @keyframes fadeinResult {
-        from { opacity: 0; transform: translateY(16px) scale(0.98); }
-        to { opacity: 1; transform: none; }
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
       }
 
       pre {
         margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
+          monospace;
         font-size: 12px;
         color: var(--text);
         line-height: 1.7;
@@ -267,7 +333,6 @@
         transition: color 0.2s;
       }
 
-      
       .key {
         color: #ff6b6b;
         font-weight: 700;
@@ -297,8 +362,13 @@
         textarea {
           height: 120px;
         }
-        .tool-btn { padding: 12px 14px; min-height: 44px; }
-        .btn-optional { display: none; }
+        .tool-btn {
+          padding: 12px 14px;
+          min-height: 44px;
+        }
+        .btn-optional {
+          display: none;
+        }
         pre {
           font-size: 13px;
         }
@@ -311,7 +381,6 @@
         .editor-row {
           gap: 0;
         }
-        
       }
 
       @media (max-width: 640px) {
@@ -358,10 +427,30 @@
   <body>
     <div class="container">
       <h1>
-        <span style="display:inline-flex;align-items:center;">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="margin-right:8px;vertical-align:middle;">
-            <rect x="3" y="3" width="18" height="18" rx="4" fill="#1d9bf0" fill-opacity="0.18"/>
-            <path d="M8 16l8-8M8 8h8v8" stroke="#1d9bf0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <span style="display: inline-flex; align-items: center">
+          <svg
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            style="margin-right: 8px; vertical-align: middle"
+          >
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="4"
+              fill="#1d9bf0"
+              fill-opacity="0.18"
+            />
+            <path
+              d="M8 16l8-8M8 8h8v8"
+              stroke="#1d9bf0"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
           </svg>
         </span>
         แปลง Log ให้อ่านง่าย
@@ -372,26 +461,71 @@
           <label
             for="inputData"
             title="วางข้อความ JSON string ที่ escape หรือ JSON ปกติ"
-            ><span style="display:inline-flex;align-items:center;vertical-align:middle;margin-right:4px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
-                <rect x="3" y="3" width="18" height="18" rx="4" fill="#7ee787" fill-opacity="0.18"/>
-                <path d="M7 8h10M7 12h10M7 16h6" stroke="#7ee787" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>วางข้อความ (String) ที่นี่:</label
+          >
+            <span
+              style="
+                display: inline-flex;
+                align-items: center;
+                vertical-align: middle;
+                margin-right: 4px;
+              "
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                style="vertical-align: middle"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="4"
+                  fill="#7ee787"
+                  fill-opacity="0.18"
+                />
+                <path
+                  d="M7 8h10M7 12h10M7 16h6"
+                  stroke="#7ee787"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg> </span
+            >วางข้อความ (String) ที่นี่:</label
           >
           <div class="pane-toolbar">
             <div></div>
             <div class="toolbar-actions">
-              <button class="tool-btn" onclick="copyPane('inputData')" title="คัดลอกข้อความ"> 
-                <svg viewBox="0 0 24 24" fill="none"><path d="M9 9h6v6H9z" fill="#1d9bf0"/></svg>
+              <button
+                class="tool-btn"
+                onclick="copyPane('inputData')"
+                title="คัดลอกข้อความ"
+              >
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
+                </svg>
                 Copy
-              </button>
-              <button class="tool-btn" onclick="togglePaneCollapse('inputData')" title="ย่อ/ขยาย"> 
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
-                Collapse
               </button>
             </div>
           </div>
+          <button
+            class="tool-btn collapse-btn"
+            onclick="togglePaneCollapse('inputData')"
+            title="ย่อ/ขยาย"
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 9h12M6 15h12"
+                stroke="#e6eef8"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            Collapse
+          </button>
           <textarea
             id="inputData"
             placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}" หรือ {"log":{...}}'
@@ -412,42 +546,225 @@
               >{"log":{"event":"Clicks tab"}}</span
             >
           </div>
-            
-            <div class="pane">
-          <button
-            onclick="convertJson()"
-            title="แปลงข้อความเป็น JSON ที่อ่านง่าย"
-          >
-            แปลงเป็น JSON
-          </button>
+          <div class="pane-controls" style="margin-top: 10px">
+            <button
+              onclick="convertJson()"
+              title="แปลงข้อความเป็น JSON ที่อ่านง่าย"
+            >
+              แปลงเป็น JSON
+            </button>
+          </div>
         </div>
 
         <div class="pane">
+          <label
+            for="inputNested"
+            title="วาง JSON ที่มี value เป็น string escape"
+          >
+            <span
+              style="
+                display: inline-flex;
+                align-items: center;
+                vertical-align: middle;
+                margin-right: 4px;
+              "
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                style="vertical-align: middle"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="4"
+                  fill="#ff6b6b"
+                  fill-opacity="0.18"
+                />
+                <path
+                  d="M7 8h10M7 12h10M7 16h6"
+                  stroke="#ff6b6b"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg> </span
+            >วาง JSON ที่ value เป็น string (Nested):
+          </label>
+          <div class="pane-toolbar">
+            <div></div>
+            <div class="toolbar-actions">
+              <button
+                class="tool-btn"
+                onclick="copyPane('inputNested')"
+                title="คัดลอกข้อความ"
+              >
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
+                </svg>
+                Copy
+              </button>
+            </div>
+          </div>
+          <button
+            class="tool-btn collapse-btn"
+            onclick="togglePaneCollapse('inputNested')"
+            title="ย่อ/ขยาย"
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 9h12M6 15h12"
+                stroke="#e6eef8"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            Collapse
+          </button>
+          <textarea
+            id="inputNested"
+            placeholder='{"value":"{\"log\":...}"}'
+            aria-describedby="inputNestedHelp"
+          ></textarea>
+          <div
+            id="inputNestedHelp"
+            class="example-text"
+            style="color: #ff6b6b; font-size: 13px; margin: 4px 0 8px 0"
+          >
+            <b>ตัวอย่าง:</b>
+            <span style="font-family: monospace"
+              >{"value":"{\"log\":...}"}</span
+            >
+          </div>
+          <div class="pane-controls" style="margin-top: 10px">
+            <button onclick="convertNestedJson()" title="แปลง JSON ซ้อน">
+              แปลง JSON ซ้อน
+            </button>
+          </div>
+        </div>
+        <script>
+          function convertNestedJson() {
+            const input = document.getElementById("inputNested").value.trim();
+            const jsonArea = document.getElementById("jsonData");
+            const outputDiv = document.getElementById("output");
+            const resultBox = document.getElementById("resultContainer");
+            const status = document.getElementById("status");
+            if (!input) {
+              setStatus("กรุณาวางข้อมูล JSON ซ้อนก่อนครับ", true);
+              return;
+            }
+            try {
+              const outer = JSON.parse(input);
+              if (!outer.value) {
+                setStatus("ไม่พบฟิลด์ value ใน JSON", true);
+                return;
+              }
+              let inner;
+              try {
+                inner = JSON.parse(outer.value);
+              } catch (e) {
+                setStatus("value ไม่ใช่ string escape ของ JSON", true);
+                return;
+              }
+              jsonArea.value = JSON.stringify(inner, null, 2);
+              outputDiv.innerHTML = syntaxHighlight(inner);
+              resultBox.style.display = "block";
+              setStatus("แสดงผล JSON ซ้อนแล้ว");
+            } catch (error) {
+              setStatus(
+                "เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง — " + error.message,
+                true
+              );
+              console.error(error);
+            }
+          }
+        </script>
+
+        <div class="pane">
           <label for="jsonData" title="แก้ไข JSON ได้โดยตรง"
-            ><span style="display:inline-flex;align-items:center;vertical-align:middle;margin-right:4px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
-                <rect x="3" y="3" width="18" height="18" rx="4" fill="#ffca6b" fill-opacity="0.18"/>
-                <path d="M7 8h10M7 12h6M7 16h10" stroke="#ffca6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>JSON (แก้ไขได้):</label
+            ><span
+              style="
+                display: inline-flex;
+                align-items: center;
+                vertical-align: middle;
+                margin-right: 4px;
+              "
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                style="vertical-align: middle"
+              >
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="4"
+                  fill="#ffca6b"
+                  fill-opacity="0.18"
+                />
+                <path
+                  d="M7 8h10M7 12h6M7 16h10"
+                  stroke="#ffca6b"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg> </span
+            >JSON (แก้ไขได้):</label
           >
           <div class="pane-toolbar">
             <div></div>
             <div class="toolbar-actions">
-              <button class="tool-btn" onclick="formatJson()" title="จัดรูปแบบ JSON"> 
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6h12M6 12h12M6 18h8" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <button
+                class="tool-btn"
+                onclick="formatJson()"
+                title="จัดรูปแบบ JSON"
+              >
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M6 6h12M6 12h12M6 18h8"
+                    stroke="#e6eef8"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
                 Format
               </button>
-              <button class="tool-btn" onclick="copyPane('jsonData')" title="คัดลอก JSON"> 
-                <svg viewBox="0 0 24 24" fill="none"><path d="M9 9h6v6H9z" fill="#1d9bf0"/></svg>
+              <button
+                class="tool-btn"
+                onclick="copyPane('jsonData')"
+                title="คัดลอก JSON"
+              >
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
+                </svg>
                 Copy
-              </button>
-              <button class="tool-btn" onclick="togglePaneCollapse('jsonData')" title="ย่อ/ขยาย"> 
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
-                Collapse
               </button>
             </div>
           </div>
+          <button
+            class="tool-btn collapse-btn"
+            onclick="togglePaneCollapse('jsonData')"
+            title="ย่อ/ขยาย"
+          >
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M6 9h12M6 15h12"
+                stroke="#e6eef8"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            Collapse
+          </button>
           <textarea
             id="jsonData"
             placeholder="JSON จะแสดงที่นี่และสามารถแก้ไขได้"
@@ -481,16 +798,54 @@
         <div class="result-header">
           <div id="status" class="result-status"></div>
           <div style="display: flex; gap: 8px; align-items: center">
-            <button id="copyBtn" onclick="copyResult()" class="tool-btn" style="display:inline-flex;align-items:center;gap:6px;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="vertical-align:middle;">
-                <rect x="7" y="7" width="10" height="10" rx="2" fill="#1d9bf0" fill-opacity="0.18"/>
-                <rect x="3" y="3" width="14" height="14" rx="2" stroke="#1d9bf0" stroke-width="2"/>
-                <path d="M9 9h6v6H9z" fill="#1d9bf0" fill-opacity="0.13"/>
+            <button
+              id="copyBtn"
+              onclick="copyResult()"
+              class="tool-btn"
+              style="display: inline-flex; align-items: center; gap: 6px"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                style="vertical-align: middle"
+              >
+                <rect
+                  x="7"
+                  y="7"
+                  width="10"
+                  height="10"
+                  rx="2"
+                  fill="#1d9bf0"
+                  fill-opacity="0.18"
+                />
+                <rect
+                  x="3"
+                  y="3"
+                  width="14"
+                  height="14"
+                  rx="2"
+                  stroke="#1d9bf0"
+                  stroke-width="2"
+                />
+                <path d="M9 9h6v6H9z" fill="#1d9bf0" fill-opacity="0.13" />
               </svg>
               Copy
             </button>
-            <button class="tool-btn" onclick="togglePaneCollapse('resultContainer')" title="ย่อ/ขยายผลลัพธ์">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M6 9h12M6 15h12" stroke="#e6eef8" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <button
+              class="tool-btn"
+              onclick="togglePaneCollapse('resultContainer')"
+              title="ย่อ/ขยายผลลัพธ์"
+            >
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M6 9h12M6 15h12"
+                  stroke="#e6eef8"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+              </svg>
               Collapse
             </button>
           </div>
@@ -500,48 +855,33 @@
     </div>
 
     <script>
-      function convertJson(auto) {
-        const input = document.getElementById("inputData").value.trim();
+      function convertNestedJson(auto) {
+        const input = document.getElementById("inputNested").value.trim();
         const jsonArea = document.getElementById("jsonData");
         const outputDiv = document.getElementById("output");
         const resultBox = document.getElementById("resultContainer");
         const status = document.getElementById("status");
         if (!input) {
-          if (!auto) setStatus("กรุณาวางข้อมูลก่อนครับ", true);
+          if (!auto) setStatus("กรุณาวางข้อมูล JSON ซ้อนก่อนครับ", true);
           return;
         }
         try {
-          let parsed;
-          // auto-detect: try parse as JSON, if fail, try parse as string then JSON
+          const outer = JSON.parse(input);
+          if (!outer.value) {
+            if (!auto) setStatus("ไม่พบฟิลด์ value ใน JSON", true);
+            return;
+          }
+          let inner;
           try {
-            parsed = JSON.parse(input);
+            inner = JSON.parse(outer.value);
           } catch (e) {
-            // try parse as string escape
-            if (/^".*"$/.test(input) || input.includes('\\"')) {
-              try {
-                parsed = JSON.parse(JSON.parse(input));
-              } catch (e2) {
-                parsed = input;
-              }
-            } else {
-              parsed = input;
-            }
+            if (!auto) setStatus("value ไม่ใช่ string escape ของ JSON", true);
+            return;
           }
-          if (typeof parsed === "string") {
-            try {
-              parsed = JSON.parse(parsed);
-            } catch (e) {
-              jsonArea.value = JSON.stringify(parsed, null, 2);
-              outputDiv.innerHTML = syntaxHighlight(parsed);
-              resultBox.style.display = "block";
-              if (!auto) setStatus("แสดงผล JSON แล้ว");
-              return;
-            }
-          }
-          jsonArea.value = JSON.stringify(parsed, null, 2);
-          outputDiv.innerHTML = syntaxHighlight(parsed);
+          jsonArea.value = JSON.stringify(inner, null, 2);
+          outputDiv.innerHTML = syntaxHighlight(inner);
           resultBox.style.display = "block";
-          if (!auto) setStatus("แสดงผล JSON แล้ว");
+          if (!auto) setStatus("แสดงผล JSON ซ้อนแล้ว");
         } catch (error) {
           if (!auto)
             setStatus(
@@ -642,7 +982,9 @@
         if (!el) return;
         const text = el.value !== undefined ? el.value : el.textContent || "";
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(() => setStatus("คัดลอกแล้ว"));
+          navigator.clipboard
+            .writeText(text)
+            .then(() => setStatus("คัดลอกแล้ว"));
         } else {
           try {
             const area = document.createElement("textarea");
@@ -662,12 +1004,10 @@
         const el = document.getElementById(id);
         if (!el) return;
         // find closest .pane container
-        let pane = el.closest && el.closest('.pane');
+        let pane = el.closest && el.closest(".pane");
         if (!pane) pane = el;
-        pane.classList.toggle('collapsed');
+        pane.classList.toggle("collapsed");
       }
-
-      
 
       function setStatus(message, isError) {
         const status = document.getElementById("status");
