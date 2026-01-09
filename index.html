@@ -920,6 +920,96 @@
         );
       }
 
+      function convertJson(auto) {
+        const input = document.getElementById("inputData").value.trim();
+        const jsonArea = document.getElementById("jsonData");
+        const outputDiv = document.getElementById("output");
+        const resultBox = document.getElementById("resultContainer");
+        const status = document.getElementById("status");
+        if (!input) {
+          if (!auto) setStatus("กรุณาวางข้อความก่อนครับ", true);
+          return;
+        }
+        // First try a normal parse
+        try {
+          let parsed = JSON.parse(input);
+          let inner = parsed;
+          if (typeof parsed === "string") {
+            try {
+              inner = JSON.parse(parsed);
+            } catch (e) {
+              // it's a plain string (not a JSON-escaped object)
+              jsonArea.value = JSON.stringify(parsed);
+              outputDiv.textContent = parsed;
+              resultBox.style.display = "block";
+              if (!auto) setStatus("ข้อความเป็น string ไม่ใช่ JSON ซ้อน", true);
+              return;
+            }
+          }
+          jsonArea.value = JSON.stringify(inner, null, 2);
+          outputDiv.innerHTML = syntaxHighlight(inner);
+          resultBox.style.display = "block";
+          if (!auto) setStatus("แปลงแล้ว");
+          return;
+        } catch (err) {
+          // If the input has extra text (e.g. a URL) try to extract the first JSON object/array substring
+          const txt = input;
+          const startIdx = Math.min(
+            ...[txt.indexOf("{"), txt.indexOf("[")].filter((i) => i >= 0)
+          );
+          if (startIdx === Infinity || startIdx < 0) {
+            if (!auto) setStatus("ไม่สามารถแปลงได้: " + err.message, true);
+            console.error(err);
+            return;
+          }
+          // find matching closing bracket
+          let depth = 0;
+          let endIdx = -1;
+          for (let i = startIdx; i < txt.length; i++) {
+            const ch = txt[i];
+            if (ch === "{" || ch === "[") depth++;
+            else if (ch === "}" || ch === "]") {
+              depth--;
+              if (depth === 0) {
+                endIdx = i;
+                break;
+              }
+            }
+          }
+          if (endIdx === -1) {
+            if (!auto) setStatus("ไม่สามารถค้นหา JSON ภายในข้อความได้", true);
+            console.error(err);
+            return;
+          }
+          const candidate = txt.substring(startIdx, endIdx + 1);
+          try {
+            let parsed2 = JSON.parse(candidate);
+            let inner = parsed2;
+            if (typeof parsed2 === "string") {
+              try {
+                inner = JSON.parse(parsed2);
+              } catch (e) {
+                jsonArea.value = JSON.stringify(parsed2);
+                outputDiv.textContent = parsed2;
+                resultBox.style.display = "block";
+                if (!auto)
+                  setStatus("ข้อความเป็น string ไม่ใช่ JSON ซ้อน", true);
+                return;
+              }
+            }
+            jsonArea.value = JSON.stringify(inner, null, 2);
+            outputDiv.innerHTML = syntaxHighlight(inner);
+            resultBox.style.display = "block";
+            if (!auto) setStatus("แปลงโดยตัดเนื้อหาอื่น ๆ รอบ ๆ ข้อความ JSON");
+            return;
+          } catch (err2) {
+            if (!auto) setStatus("ไม่สามารถแปลงได้: " + err.message, true);
+            console.error(err2);
+            return;
+          }
+        }
+      }
+
       function convertToString() {
         const jsonText = document.getElementById("jsonData").value.trim();
         const inputArea = document.getElementById("inputData");
