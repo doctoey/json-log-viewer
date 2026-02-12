@@ -1,72 +1,9 @@
-<script>
-  window.addEventListener("DOMContentLoaded", function () {
-    // For inputData (ปกติ)
-    const inputArea = document.getElementById("inputData");
-    if (inputArea) {
-      inputArea.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        inputArea.style.borderColor = "#1d9bf0";
-      });
-      inputArea.addEventListener("dragleave", (e) => {
-        inputArea.style.borderColor = "";
-      });
-      inputArea.addEventListener("drop", (e) => {
-        e.preventDefault();
-        inputArea.style.borderColor = "";
-        const file = e.dataTransfer.files && e.dataTransfer.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function (evt) {
-            inputArea.value = evt.target.result;
-            convertJson(true);
-          };
-          reader.readAsText(file);
-        }
-      });
-      inputArea.addEventListener("paste", function (e) {
-        setTimeout(() => convertJson(true), 10);
-      });
-    }
-
-    // For inputNested (JSON ซ้อน)
-    const inputNested = document.getElementById("inputNested");
-    if (inputNested) {
-      inputNested.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        inputNested.style.borderColor = "#1d9bf0";
-      });
-      inputNested.addEventListener("dragleave", (e) => {
-        inputNested.style.borderColor = "";
-      });
-      inputNested.addEventListener("drop", (e) => {
-        e.preventDefault();
-        inputNested.style.borderColor = "";
-        const file = e.dataTransfer.files && e.dataTransfer.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function (evt) {
-            inputNested.value = evt.target.result;
-            convertNestedJson(true);
-          };
-          reader.readAsText(file);
-        }
-      });
-      inputNested.addEventListener("paste", function (e) {
-        setTimeout(() => convertNestedJson(true), 10);
-      });
-      inputNested.addEventListener("input", function (e) {
-        // auto convert on typing, but only if user is not deleting
-        setTimeout(() => convertNestedJson(true), 10);
-      });
-    }
-  });
-</script>
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ตัวแปลง JSON Log ให้อ่านง่าย</title>
+    <title>ตัวแปลง JSON Log ให้อ่านง่าย (Enhanced)</title>
     <style>
       :root {
         --bg: #0f1419;
@@ -74,8 +11,17 @@
         --muted: #8899a6;
         --text: #e6eef8;
         --accent: #1d9bf0;
+        --accent-hover: #1a8cd8;
         --accent-2: #2aa7ff;
-        --card-border: rgba(255, 255, 255, 0.035);
+        --success: #00ba7c;
+        --error: #f91880;
+        --key: #ff6b6b;
+        --string: #7ee787;
+        --number: #ffca6b;
+        --boolean: #1da1f2;
+        --null: #b085ff;
+        --border: rgba(255, 255, 255, 0.11);
+        --glass-bg: rgba(21, 32, 43, 0.98);
       }
 
       * {
@@ -83,1097 +29,760 @@
       }
 
       body {
-        font-family: "Sarabun", Inter, system-ui, -apple-system, "Segoe UI",
-          Roboto, sans-serif;
+        font-family:
+          "Sarabun",
+          Inter,
+          system-ui,
+          -apple-system,
+          sans-serif;
         background: linear-gradient(120deg, #0f1419 0%, #1d2636 100%);
         color: var(--text);
         padding: 28px 0;
         min-height: 100vh;
         margin: 0;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* Helpers */
+      .hidden {
+        display: none !important;
+      }
+      .flex {
+        display: flex;
+      }
+      .items-center {
+        align-items: center;
+      }
+      .justify-between {
+        justify-content: space-between;
+      }
+      .gap-2 {
+        gap: 8px;
+      }
+      .mt-4 {
+        margin-top: 16px;
+      }
+
+      /* Layout */
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 36px;
+        background-color: var(--panel);
+        border-radius: 32px;
+        border: 1.5px solid var(--border);
+        box-shadow: 0 16px 48px rgba(29, 155, 240, 0.16);
+        backdrop-filter: blur(18px);
       }
 
       h1 {
-        color: var(--text);
         text-align: center;
         font-size: 2.2rem;
-        margin: 10px 0 28px;
-        letter-spacing: 0.2px;
-        font-weight: 800;
-        text-shadow: 0 2px 12px rgba(29, 155, 240, 0.1);
+        margin-bottom: 32px;
+        color: var(--text);
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 12px;
+        text-shadow: 0 2px 12px rgba(29, 155, 240, 0.1);
       }
 
-      .container {
-        background: linear-gradient(
-          120deg,
-          rgba(29, 155, 240, 0.13) 0%,
-          rgba(21, 32, 43, 0.98) 100%
-        );
-        padding: 40px 36px 36px 36px;
-        border-radius: 32px;
-        box-shadow: 0 16px 48px 0 rgba(29, 155, 240, 0.16),
-          0 2px 12px 0 rgba(0, 0, 0, 0.13);
-        border: 1.5px solid rgba(255, 255, 255, 0.11);
-        background-color: var(--panel);
-        margin-top: 48px;
-        max-width: 1200px;
-        margin-left: auto;
-        margin-right: auto;
-        backdrop-filter: blur(18px) saturate(1.25);
-        -webkit-backdrop-filter: blur(18px) saturate(1.25);
-        position: relative;
-        transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
-      }
-
-      label {
-        display: block;
-        color: var(--muted);
-        font-weight: 600;
-        margin-bottom: 8px;
-      }
-
-      .pane-toolbar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 10px;
-      }
-      .toolbar-actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-      .tool-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 10px;
-        background: rgba(255, 255, 255, 0.03);
-        color: var(--text);
-        border: 1px solid rgba(255, 255, 255, 0.03);
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 13px;
-        transition: background 0.12s, transform 0.08s, box-shadow 0.12s;
-        z-index: 10;
-      }
-      .tool-btn svg {
-        width: 14px;
-        height: 14px;
-      }
-      .tool-btn:hover {
-        background: rgba(29, 155, 240, 0.08);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 18px rgba(29, 155, 240, 0.06);
-      }
-      .collapse-btn {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 20;
-        background: rgba(21, 32, 43, 0.92);
-        box-shadow: 0 2px 8px rgba(29, 155, 240, 0.08);
-      }
-      .pane.collapsed textarea,
-      .pane.collapsed .example-text,
-      .pane.collapsed .pane-controls {
-        display: none;
-      }
-
+      /* Editor Areas */
       .editor-row {
         display: flex;
         gap: 28px;
         margin-top: 18px;
-        position: relative;
         justify-content: center;
       }
 
       .pane {
         flex: 1;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1.5px solid rgba(29, 155, 240, 0.09);
+        border-radius: 20px;
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        background: rgba(255, 255, 255, 0.04);
-        border-radius: 20px;
-        padding: 32px 24px 22px 24px;
-        box-shadow: 0 2px 12px 0 rgba(29, 155, 240, 0.09);
-        border: 1.5px solid rgba(29, 155, 240, 0.09);
+        transition: all 0.3s ease;
         position: relative;
-        z-index: 2;
-        max-width: 440px;
-        min-width: 0;
-        transition: box-shadow 0.3s, border-radius 0.3s, padding 0.3s;
+        min-width: 0; /* Prevents flex overflow */
+      }
+
+      .pane.collapsed .expandable-content {
+        display: none;
       }
 
       textarea {
         width: 100%;
         height: 200px;
-        border-radius: 12px;
-        padding: 16px 14px;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
-          monospace;
-        background: linear-gradient(120deg, #10171d 0%, #1a2836 100%);
-        color: var(--text);
+        background: rgba(0, 0, 0, 0.2);
         border: 1.5px solid rgba(29, 155, 240, 0.13);
+        border-radius: 12px;
+        color: var(--text);
+        padding: 16px;
+        font-family: monospace;
         font-size: 14px;
-        line-height: 1.55;
         resize: vertical;
-        box-shadow: 0 1px 4px 0 rgba(29, 155, 240, 0.04);
-        transition: border 0.2s, box-shadow 0.2s;
-        backdrop-filter: blur(2px);
+        transition: all 0.2s;
       }
+
       textarea:focus {
         outline: none;
-        border: 2.5px solid var(--accent-2);
-        box-shadow: 0 0 0 4px rgba(29, 155, 240, 0.18);
-        background: linear-gradient(120deg, #16202a 0%, #1a2836 100%);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15);
       }
 
-      button {
-        display: inline-block;
-        width: auto;
-        min-width: 120px;
-        padding: 12px 22px;
-        border-radius: 999px;
-        border: 0;
+      /* Buttons */
+      .btn {
+        padding: 10px 20px;
+        border-radius: 99px;
+        border: none;
         background: linear-gradient(90deg, var(--accent), var(--accent-2));
-        color: #fff;
+        color: white;
         font-weight: 700;
-        font-size: 14px;
         cursor: pointer;
-        margin-top: 16px;
-        margin-bottom: 0;
-        box-shadow: 0 4px 16px rgba(29, 155, 240, 0.13);
-        transition: background 0.18s, box-shadow 0.18s, transform 0.12s,
-          filter 0.18s;
-        filter: drop-shadow(0 2px 8px rgba(29, 155, 240, 0.1));
-        position: relative;
-        overflow: hidden;
-      }
-      button:after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 0;
-        height: 0;
-        background: rgba(255, 255, 255, 0.18);
-        border-radius: 50%;
-        transform: translate(-50%, -50%);
-        transition: width 0.3s, height 0.3s, opacity 0.3s;
-        opacity: 0;
-        z-index: 0;
-      }
-      button:active:after {
-        width: 180%;
-        height: 400%;
-        opacity: 0.18;
-        transition: 0s;
-      }
-      button:hover,
-      button:focus {
-        background: linear-gradient(90deg, var(--accent-2), var(--accent));
-        box-shadow: 0 6px 24px rgba(29, 155, 240, 0.18);
-        transform: translateY(-1px) scale(1.03);
-        filter: drop-shadow(0 4px 16px rgba(29, 155, 240, 0.13));
-      }
-      button:active {
-        transform: translateY(1px) scale(0.98);
-      }
-
-      .pane-controls {
-        display: flex;
-        gap: 8px;
+        transition:
+          transform 0.1s,
+          box-shadow 0.2s;
+        display: inline-flex;
         align-items: center;
+        gap: 8px;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(29, 155, 240, 0.3);
+      }
+      .btn:active {
+        transform: scale(0.98);
       }
 
+      .btn-ghost {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .btn-ghost:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .tool-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tool-btn:hover {
+        background: rgba(29, 155, 240, 0.1);
+        color: var(--accent);
+      }
+
+      /* Result Box */
       .result-box {
         margin-top: 28px;
-        background: linear-gradient(
-          120deg,
-          rgba(29, 155, 240, 0.13) 0%,
-          rgba(21, 32, 43, 0.98) 100%
-        );
-        padding: 24px 18px 18px 18px;
+        background: var(--glass-bg);
+        border: 1px solid var(--border);
         border-radius: 18px;
-        overflow: auto;
+        padding: 24px;
         display: none;
-        border: 1.5px solid rgba(29, 155, 240, 0.13);
-        box-shadow: 0 4px 18px 0 rgba(29, 155, 240, 0.13);
-        transition: box-shadow 0.3s, background 0.3s;
-        animation: fadeinResult 0.5s;
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
-      @keyframes fadeinResult {
+
+      @keyframes slideUp {
         from {
           opacity: 0;
-          transform: translateY(16px) scale(0.98);
+          transform: translateY(20px);
         }
         to {
           opacity: 1;
-          transform: none;
-        }
-      }
-
-      pre {
-        margin: 0;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono",
-          monospace;
-        font-size: 12px;
-        color: var(--text);
-        line-height: 1.7;
-        white-space: pre-wrap;
-        word-break: break-word;
-        background: none;
-        transition: color 0.2s;
-      }
-
-      .key {
-        color: #ff6b6b;
-        font-weight: 700;
-      }
-      .string {
-        color: #7ee787;
-      }
-      .number {
-        color: #ffca6b;
-      }
-      .boolean {
-        color: #1da1f2;
-      }
-      .null {
-        color: #b085ff;
-      }
-
-      .result-box pre {
-        background: transparent;
-        padding: 0;
-      }
-
-      @media (max-width: 520px) {
-        h1 {
-          font-size: 20px;
-        }
-        textarea {
-          height: 120px;
-        }
-        .tool-btn {
-          padding: 12px 14px;
-          min-height: 44px;
-        }
-        .btn-optional {
-          display: none;
-        }
-        pre {
-          font-size: 13px;
-        }
-        .container {
-          padding: 10px 2vw 10px 2vw;
-        }
-        .pane {
-          padding: 8px 2vw 8px 2vw;
-        }
-        .editor-row {
-          gap: 0;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .editor-row {
-          flex-direction: column;
-        }
-      }
-
-      @media (max-width: 900px) and (min-width: 641px) {
-        .container {
-          padding-left: 2vw;
-          padding-right: 2vw;
-        }
-        .editor-row {
-          gap: 8px;
-        }
-        .pane {
-          max-width: 360px;
+          transform: translateY(0);
         }
       }
 
       .result-header {
         display: flex;
         justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 8px;
         align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       }
-      .result-header button {
-        width: auto;
-        padding: 8px 12px;
-        font-size: 13px;
-        margin-top: 0;
-      }
-      .result-status {
+
+      #status {
+        font-size: 14px;
         color: var(--muted);
-        font-size: 13px;
       }
-      .result-status.error {
-        color: #ff6b6b;
+      #status.error {
+        color: var(--error);
+      }
+      #status.success {
+        color: var(--success);
+      }
+
+      /* JSON Viewer / Tree */
+      .json-viewer {
+        font-family: "Menlo", "Monaco", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+      }
+      .jv-node {
+        margin-left: 20px;
+        border-left: 1px solid rgba(255, 255, 255, 0.05);
+        padding-left: 5px;
+      }
+      .jv-toggle {
+        cursor: pointer;
+        user-select: none;
+        display: inline-block;
+        margin-right: 4px;
+        color: var(--muted);
+        transition: transform 0.15s;
+        width: 14px;
+        text-align: center;
+      }
+      .jv-toggle.collapsed {
+        transform: rotate(-90deg);
+      }
+      .jv-key {
+        color: var(--key);
+        margin-right: 4px;
+      }
+      .jv-string {
+        color: var(--string);
+        word-break: break-all;
+      }
+      .jv-number {
+        color: var(--number);
+      }
+      .jv-boolean {
+        color: var(--boolean);
+      }
+      .jv-null {
+        color: var(--null);
+      }
+      .jv-object-start,
+      .jv-array-start {
+        color: var(--text);
+        cursor: pointer;
+      }
+      .jv-object-start:hover,
+      .jv-array-start:hover {
+        color: var(--accent);
+      }
+      .jv-collapsed-preview {
+        color: var(--muted);
+        font-style: italic;
+        font-size: 12px;
+        margin-left: 4px;
+      }
+
+      @media (max-width: 768px) {
+        .editor-row {
+          flex-direction: column;
+        }
+        .pane {
+          width: 100%;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
       <h1>
-        <span style="display: inline-flex; align-items: center">
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            style="margin-right: 8px; vertical-align: middle"
-          >
-            <rect
-              x="3"
-              y="3"
-              width="18"
-              height="18"
-              rx="4"
-              fill="#1d9bf0"
-              fill-opacity="0.18"
-            />
-            <path
-              d="M8 16l8-8M8 8h8v8"
-              stroke="#1d9bf0"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </span>
-        แปลง Log ให้อ่านง่าย
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <rect
+            x="3"
+            y="3"
+            width="18"
+            height="18"
+            rx="4"
+            fill="var(--accent)"
+            fill-opacity="0.2"
+          />
+          <path
+            d="M8 16l8-8M8 8h8v8"
+            stroke="var(--accent)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        JSON Log Viewer
       </h1>
 
+      <!-- Editors -->
       <div class="editor-row">
-        <div class="pane">
-          <label
-            for="inputData"
-            title="วางข้อความ JSON string ที่ escape หรือ JSON ปกติ"
-          >
-            <span
-              style="
-                display: inline-flex;
-                align-items: center;
-                vertical-align: middle;
-                margin-right: 4px;
-              "
+        <!-- Main Input -->
+        <div class="pane" id="pane-input">
+          <div class="flex justify-between items-center mb-2">
+            <label
+              class="font-bold flex items-center gap-2"
+              style="color: var(--string)"
             >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                style="vertical-align: middle"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="4"
-                  fill="#7ee787"
-                  fill-opacity="0.18"
-                />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path
                   d="M7 8h10M7 12h10M7 16h6"
-                  stroke="#7ee787"
+                  stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
-                  stroke-linejoin="round"
                 />
-              </svg> </span
-            >วางข้อความ (String) ที่นี่:</label
-          >
-          <div class="pane-toolbar">
-            <div></div>
-            <div class="toolbar-actions">
+              </svg>
+              Input Data
+            </label>
+            <div class="flex gap-2">
               <button
                 class="tool-btn"
-                onclick="copyPane('inputData')"
-                title="คัดลอกข้อความ"
+                onclick="
+                  Utils.copyToClipboard(
+                    document.getElementById('inputData').value,
+                    this,
+                  )
+                "
               >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 9h6v6H9z" fill="currentColor" />
                 </svg>
                 Copy
               </button>
+              <button class="tool-btn" onclick="Utils.clearInput('inputData')">
+                Clear
+              </button>
             </div>
           </div>
-          <button
-            class="tool-btn collapse-btn"
-            onclick="togglePaneCollapse('inputData')"
-            title="ย่อ/ขยาย"
-          >
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M6 9h12M6 15h12"
-                stroke="#e6eef8"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
-            </svg>
-            Collapse
-          </button>
           <textarea
             id="inputData"
-            placeholder='ตัวอย่าง: "{\"log\":{\"event\":...}}" หรือ {"log":{...}}'
-            aria-describedby="inputDataHelp"
+            placeholder="Paste JSON string, Log line, or Nested JSON here..."
           ></textarea>
-          <div
-            id="inputDataHelp"
-            class="example-text"
-            style="color: #7ee787; font-size: 13px; margin: 4px 0 8px 0"
-          >
-            <b>ตัวอย่าง:</b> <br />
-            <span style="color: #ffca6b">String escape:</span>
-            <span style="font-family: monospace"
-              >"{\"log\":{\"event\":\"Clicks tab\"}}"</span
-            ><br />
-            <span style="color: #1da1f2">JSON ปกติ:</span>
-            <span style="font-family: monospace"
-              >{"log":{"event":"Clicks tab"}}</span
-            >
-          </div>
-          <div class="pane-controls" style="margin-top: 10px">
-            <button
-              onclick="convertJson()"
-              title="แปลงข้อความเป็น JSON ที่อ่านง่าย"
-            >
-              แปลงเป็น JSON
-            </button>
-          </div>
-        </div>
-
-        <div class="pane">
-          <label
-            for="inputNested"
-            title="วาง JSON ที่มี value เป็น string escape"
-          >
-            <span
-              style="
-                display: inline-flex;
-                align-items: center;
-                vertical-align: middle;
-                margin-right: 4px;
-              "
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                style="vertical-align: middle"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="4"
-                  fill="#ff6b6b"
-                  fill-opacity="0.18"
-                />
-                <path
-                  d="M7 8h10M7 12h10M7 16h6"
-                  stroke="#ff6b6b"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg> </span
-            >วาง JSON ที่ value เป็น string (Nested):
-          </label>
-          <div class="pane-toolbar">
-            <div></div>
-            <div class="toolbar-actions">
-              <button
-                class="tool-btn"
-                onclick="copyPane('inputNested')"
-                title="คัดลอกข้อความ"
-              >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
-                </svg>
-                Copy
+          <div class="expandable-content">
+            <p style="font-size: 12px; color: var(--muted); margin-top: 8px">
+              Supports: Plain JSON, JSON inside String, Log lines with JSON
+              substring.
+            </p>
+            <div class="mt-4 flex gap-2">
+              <button class="btn" onclick="App.processInput(false)">
+                Convert JSON
               </button>
             </div>
           </div>
-          <button
-            class="tool-btn collapse-btn"
-            onclick="togglePaneCollapse('inputNested')"
-            title="ย่อ/ขยาย"
-          >
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M6 9h12M6 15h12"
-                stroke="#e6eef8"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
-            </svg>
-            Collapse
-          </button>
+        </div>
+
+        <!-- Nested Input (Specialized) -->
+        <div class="pane" id="pane-nested">
+          <div class="flex justify-between items-center mb-2">
+            <label
+              class="font-bold flex items-center gap-2"
+              style="color: var(--key)"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              Nested Value
+            </label>
+            <div class="flex gap-2">
+              <button
+                class="tool-btn"
+                onclick="
+                  Utils.copyToClipboard(
+                    document.getElementById('inputNested').value,
+                    this,
+                  )
+                "
+              >
+                Copy
+              </button>
+              <button
+                class="tool-btn"
+                onclick="Utils.clearInput('inputNested')"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
           <textarea
             id="inputNested"
-            placeholder='{"value":"{\"log\":...}"}'
-            aria-describedby="inputNestedHelp"
+            placeholder='{"value": "{\"log\": ...}"}'
           ></textarea>
-          <div
-            id="inputNestedHelp"
-            class="example-text"
-            style="color: #ff6b6b; font-size: 13px; margin: 4px 0 8px 0"
-          >
-            <b>ตัวอย่าง:</b>
-            <span style="font-family: monospace"
-              >{"value":"{\"log\":...}"}</span
-            >
-          </div>
-          <div class="pane-controls" style="margin-top: 10px">
-            <button onclick="convertNestedJson()" title="แปลง JSON ซ้อน">
-              แปลง JSON ซ้อน
-            </button>
-          </div>
-        </div>
-        <script>
-          function convertNestedJson() {
-            const input = document.getElementById("inputNested").value.trim();
-            const jsonArea = document.getElementById("jsonData");
-            const outputDiv = document.getElementById("output");
-            const resultBox = document.getElementById("resultContainer");
-            const status = document.getElementById("status");
-            if (!input) {
-              setStatus("กรุณาวางข้อมูล JSON ซ้อนก่อนครับ", true);
-              return;
-            }
-            try {
-              const outer = JSON.parse(input);
-              if (!outer.value) {
-                setStatus("ไม่พบฟิลด์ value ใน JSON", true);
-                return;
-              }
-              let inner;
-              try {
-                inner = JSON.parse(outer.value);
-              } catch (e) {
-                setStatus("value ไม่ใช่ string escape ของ JSON", true);
-                return;
-              }
-              jsonArea.value = JSON.stringify(inner, null, 2);
-              outputDiv.innerHTML = syntaxHighlight(inner);
-              resultBox.style.display = "block";
-              setStatus("แสดงผล JSON ซ้อนแล้ว");
-            } catch (error) {
-              setStatus(
-                "เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง — " + error.message,
-                true
-              );
-              console.error(error);
-            }
-          }
-        </script>
-
-        <div class="pane">
-          <label for="jsonData" title="แก้ไข JSON ได้โดยตรง"
-            ><span
-              style="
-                display: inline-flex;
-                align-items: center;
-                vertical-align: middle;
-                margin-right: 4px;
-              "
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                style="vertical-align: middle"
-              >
-                <rect
-                  x="3"
-                  y="3"
-                  width="18"
-                  height="18"
-                  rx="4"
-                  fill="#ffca6b"
-                  fill-opacity="0.18"
-                />
-                <path
-                  d="M7 8h10M7 12h6M7 16h10"
-                  stroke="#ffca6b"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg> </span
-            >JSON (แก้ไขได้):</label
-          >
-          <div class="pane-toolbar">
-            <div></div>
-            <div class="toolbar-actions">
+          <div class="expandable-content">
+            <p style="font-size: 12px; color: var(--key); margin-top: 8px">
+              Extracts JSON from `value` field automatically.
+            </p>
+            <div class="mt-4">
               <button
-                class="tool-btn"
-                onclick="formatJson()"
-                title="จัดรูปแบบ JSON"
+                class="btn"
+                style="background: linear-gradient(90deg, #ff6b6b, #ff8787)"
+                onclick="App.processNested(false)"
               >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M6 6h12M6 12h12M6 18h8"
-                    stroke="#e6eef8"
-                    stroke-width="1.6"
-                    stroke-linecap="round"
-                  />
-                </svg>
-                Format
-              </button>
-              <button
-                class="tool-btn"
-                onclick="copyPane('jsonData')"
-                title="คัดลอก JSON"
-              >
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M9 9h6v6H9z" fill="#1d9bf0" />
-                </svg>
-                Copy
+                Extract Nested
               </button>
             </div>
-          </div>
-          <button
-            class="tool-btn collapse-btn"
-            onclick="togglePaneCollapse('jsonData')"
-            title="ย่อ/ขยาย"
-          >
-            <svg viewBox="0 0 24 24" fill="none">
-              <path
-                d="M6 9h12M6 15h12"
-                stroke="#e6eef8"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
-            </svg>
-            Collapse
-          </button>
-          <textarea
-            id="jsonData"
-            placeholder="JSON จะแสดงที่นี่และสามารถแก้ไขได้"
-            aria-describedby="jsonDataHelp"
-          ></textarea>
-          <div
-            id="jsonDataHelp"
-            class="example-text"
-            style="color: #7ee787; font-size: 13px; margin: 4px 0 8px 0"
-          >
-            <b>ตัวอย่าง:</b>
-            <span style="font-family: monospace"
-              >{"log":{"event":"Clicks tab"}}</span
-            >
-          </div>
-          <div class="pane-controls">
-            <button onclick="formatJson()" title="จัดรูปแบบ JSON ให้สวยงาม">
-              จัด JSON
-            </button>
-            <button
-              onclick="convertToString()"
-              title="แปลง JSON เป็น string escape"
-            >
-              แปลงเป็น String
-            </button>
           </div>
         </div>
       </div>
 
+      <!-- Output / Result -->
       <div id="resultContainer" class="result-box">
         <div class="result-header">
-          <div id="status" class="result-status"></div>
-          <div style="display: flex; gap: 8px; align-items: center">
-            <button
-              id="copyBtn"
-              onclick="copyResult()"
-              class="tool-btn"
-              style="display: inline-flex; align-items: center; gap: 6px"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                style="vertical-align: middle"
-              >
-                <rect
-                  x="7"
-                  y="7"
-                  width="10"
-                  height="10"
-                  rx="2"
-                  fill="#1d9bf0"
-                  fill-opacity="0.18"
-                />
-                <rect
-                  x="3"
-                  y="3"
-                  width="14"
-                  height="14"
-                  rx="2"
-                  stroke="#1d9bf0"
-                  stroke-width="2"
-                />
-                <path d="M9 9h6v6H9z" fill="#1d9bf0" fill-opacity="0.13" />
-              </svg>
-              Copy
+          <div id="status">Ready</div>
+          <div class="flex gap-2">
+            <button class="tool-btn" onclick="App.toggleViewMode()">
+              <span id="viewModeLabel">Show Plain</span>
             </button>
             <button
               class="tool-btn"
-              onclick="togglePaneCollapse('resultContainer')"
-              title="ย่อ/ขยายผลลัพธ์"
+              id="copyResultBtn"
+              onclick="Utils.copyResult()"
             >
-              <svg viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6 9h12M6 15h12"
-                  stroke="#e6eef8"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                />
-              </svg>
-              Collapse
+              Copy Result
+            </button>
+            <button
+              class="tool-btn"
+              onclick="
+                document.getElementById('resultContainer').style.display =
+                  'none'
+              "
+            >
+              Close
             </button>
           </div>
         </div>
-        <pre id="output"></pre>
+
+        <!-- Tree View -->
+        <div id="jsonTreeOutput" class="json-viewer"></div>
+
+        <!-- Text View (Hidden by default) -->
+        <textarea
+          id="jsonTextOutput"
+          class="hidden"
+          style="height: 400px; font-size: 12px"
+        ></textarea>
       </div>
     </div>
 
     <script>
-      function convertNestedJson(auto) {
-        const input = document.getElementById("inputNested").value.trim();
-        const jsonArea = document.getElementById("jsonData");
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
-        const status = document.getElementById("status");
-        if (!input) {
-          if (!auto) setStatus("กรุณาวางข้อมูล JSON ซ้อนก่อนครับ", true);
-          return;
-        }
-        try {
-          const outer = JSON.parse(input);
-          if (!outer.value) {
-            if (!auto) setStatus("ไม่พบฟิลด์ value ใน JSON", true);
-            return;
-          }
-          let inner;
+      /**
+       * Utility Functions
+       */
+      const Utils = {
+        copyToClipboard: async (text, btnElement) => {
+          if (!text) return;
           try {
-            inner = JSON.parse(outer.value);
-          } catch (e) {
-            if (!auto) setStatus("value ไม่ใช่ string escape ของ JSON", true);
-            return;
+            await navigator.clipboard.writeText(text);
+            const originalText = btnElement.innerText;
+            btnElement.innerText = "Copied!";
+            btnElement.style.color = "var(--success)";
+            setTimeout(() => {
+              btnElement.innerText = originalText;
+              btnElement.style.color = "";
+            }, 2000);
+            App.setStatus("Copied to clipboard", "success");
+          } catch (err) {
+            // Fallback
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            App.setStatus("Copied (fallback)", "success");
           }
-          jsonArea.value = JSON.stringify(inner, null, 2);
-          outputDiv.innerHTML = syntaxHighlight(inner);
-          resultBox.style.display = "block";
-          if (!auto) setStatus("แสดงผล JSON ซ้อนแล้ว");
-        } catch (error) {
-          if (!auto)
-            setStatus(
-              "เกิดข้อผิดพลาด: รูปแบบ JSON ไม่ถูกต้อง — " + error.message,
-              true
-            );
-          console.error(error);
-        }
-      }
-
-      function syntaxHighlight(json) {
-        if (typeof json != "string") {
-          json = JSON.stringify(json, undefined, 2);
-        }
-        json = json
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;");
-        return json.replace(
-          /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-          function (match) {
-            var cls = "number";
-            if (/^"/.test(match)) {
-              if (/:$/.test(match)) {
-                cls = "key";
-              } else {
-                cls = "string";
-              }
-            } else if (/true|false/.test(match)) {
-              cls = "boolean";
-            } else if (/null/.test(match)) {
-              cls = "null";
-            }
-            return '<span class="' + cls + '">' + match + "</span>";
-          }
-        );
-      }
-
-      function convertJson(auto) {
-        const input = document.getElementById("inputData").value.trim();
-        const jsonArea = document.getElementById("jsonData");
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
-        const status = document.getElementById("status");
-        if (!input) {
-          if (!auto) setStatus("กรุณาวางข้อความก่อนครับ", true);
-          return;
-        }
-        // First try a normal parse
-        try {
-          let parsed = JSON.parse(input);
-          let inner = parsed;
-          if (typeof parsed === "string") {
-            try {
-              inner = JSON.parse(parsed);
-            } catch (e) {
-              // it's a plain string (not a JSON-escaped object)
-              jsonArea.value = JSON.stringify(parsed);
-              outputDiv.textContent = parsed;
-              resultBox.style.display = "block";
-              if (!auto) setStatus("ข้อความเป็น string ไม่ใช่ JSON ซ้อน", true);
-              return;
-            }
-          }
-          jsonArea.value = JSON.stringify(inner, null, 2);
-          outputDiv.innerHTML = syntaxHighlight(inner);
-          resultBox.style.display = "block";
-          if (!auto) setStatus("แปลงแล้ว");
-          return;
-        } catch (err) {
-          // If the input has extra text (e.g. a URL) try to extract the first JSON object/array substring
-          const txt = input;
-          const startIdx = Math.min(
-            ...[txt.indexOf("{"), txt.indexOf("[")].filter((i) => i >= 0)
+        },
+        clearInput: (id) => {
+          document.getElementById(id).value = "";
+          document.getElementById(id).focus();
+        },
+        copyResult: () => {
+          // Copy the raw JSON
+          const jsonText = document.getElementById("jsonTextOutput").value;
+          Utils.copyToClipboard(
+            jsonText,
+            document.getElementById("copyResultBtn"),
           );
-          if (startIdx === Infinity || startIdx < 0) {
-            if (!auto) setStatus("ไม่สามารถแปลงได้: " + err.message, true);
-            console.error(err);
-            return;
+        },
+      };
+
+      /**
+       * Main Application Logic
+       */
+      const App = {
+        state: {
+          currentJson: null,
+          viewMode: "tree", // or 'text'
+        },
+
+        init: () => {
+          // Auto-convert on paste
+          ["inputData", "inputNested"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+              el.addEventListener("paste", () => {
+                setTimeout(() => {
+                  if (id === "inputNested") App.processNested(true);
+                  else App.processInput(true);
+                }, 50);
+              });
+            }
+          });
+        },
+
+        setStatus: (msg, type = "normal") => {
+          const el = document.getElementById("status");
+          el.textContent = msg;
+          el.className =
+            type === "error" ? "error" : type === "success" ? "success" : "";
+
+          if (type !== "error") {
+            setTimeout(() => (el.textContent = ""), 4000);
           }
-          // find matching closing bracket
-          let depth = 0;
-          let endIdx = -1;
-          for (let i = startIdx; i < txt.length; i++) {
-            const ch = txt[i];
-            if (ch === "{" || ch === "[") depth++;
-            else if (ch === "}" || ch === "]") {
-              depth--;
-              if (depth === 0) {
-                endIdx = i;
+        },
+
+        toggleViewMode: () => {
+          const treeEl = document.getElementById("jsonTreeOutput");
+          const textEl = document.getElementById("jsonTextOutput");
+          const label = document.getElementById("viewModeLabel");
+
+          if (App.state.viewMode === "tree") {
+            App.state.viewMode = "text";
+            treeEl.classList.add("hidden");
+            textEl.classList.remove("hidden");
+            label.textContent = "Show Tree";
+          } else {
+            App.state.viewMode = "tree";
+            treeEl.classList.remove("hidden");
+            textEl.classList.add("hidden");
+            label.textContent = "Show Plain";
+          }
+        },
+
+        displayResult: (jsonObj, msg) => {
+          App.state.currentJson = jsonObj;
+
+          document.getElementById("resultContainer").style.display = "block";
+          App.setStatus(msg || "Successfully converted", "success");
+
+          // 1. Render Tree
+          const treeContainer = document.getElementById("jsonTreeOutput");
+          treeContainer.innerHTML = "";
+          treeContainer.appendChild(JsonViewer.render(jsonObj));
+
+          // 2. Render Text
+          document.getElementById("jsonTextOutput").value = JSON.stringify(
+            jsonObj,
+            null,
+            2,
+          );
+        },
+
+        processInput: (isAuto) => {
+          const input = document.getElementById("inputData").value.trim();
+          if (!input) return;
+
+          try {
+            let result = App.parseRobust(input);
+            App.displayResult(
+              result,
+              isAuto ? "Auto-converted" : "Converted successfully",
+            );
+          } catch (e) {
+            console.error(e);
+            if (!isAuto)
+              App.setStatus("Could not parse JSON: " + e.message, "error");
+          }
+        },
+
+        processNested: (isAuto) => {
+          const input = document.getElementById("inputNested").value.trim();
+          if (!input) return;
+
+          try {
+            const outer = JSON.parse(input);
+            if (!outer.value) throw new Error("No 'value' field found in JSON");
+
+            let inner;
+            try {
+              inner = JSON.parse(outer.value);
+            } catch (e) {
+              throw new Error("The 'value' field is not valid JSON string");
+            }
+
+            App.displayResult(
+              inner,
+              isAuto ? "Auto-extracted nested JSON" : "Extracted successfully",
+            );
+          } catch (e) {
+            if (!isAuto) App.setStatus(e.message, "error");
+          }
+        },
+
+        // Helper to handle various "dirty" JSON scenarios
+        parseRobust: (str) => {
+          // 1. Try direct parse
+          try {
+            let obj = JSON.parse(str);
+            // If it's a string, try to parse it again (double stringified)
+            if (typeof obj === "string") {
+              try {
+                return JSON.parse(obj);
+              } catch (e) {
+                return obj;
+              } // Return string if not json
+            }
+            return obj;
+          } catch (e) {
+            /* continue */
+          }
+
+          // 2. Try to extract JSON from a log line (find { or [ and matching } or ])
+          const start = str.search(/[{}\[]/);
+          if (start === -1) throw new Error("No JSON object found");
+
+          // Simple stack-based extractor
+          let stack = 0;
+          let startIndex = start;
+          let endIndex = -1;
+
+          for (let i = start; i < str.length; i++) {
+            if (str[i] === "{" || str[i] === "[") stack++;
+            if (str[i] === "}" || str[i] === "]") {
+              stack--;
+              if (stack === 0) {
+                endIndex = i;
                 break;
               }
             }
           }
-          if (endIdx === -1) {
-            if (!auto) setStatus("ไม่สามารถค้นหา JSON ภายในข้อความได้", true);
-            console.error(err);
-            return;
-          }
-          const candidate = txt.substring(startIdx, endIdx + 1);
-          try {
-            let parsed2 = JSON.parse(candidate);
-            let inner = parsed2;
-            if (typeof parsed2 === "string") {
-              try {
-                inner = JSON.parse(parsed2);
-              } catch (e) {
-                jsonArea.value = JSON.stringify(parsed2);
-                outputDiv.textContent = parsed2;
-                resultBox.style.display = "block";
-                if (!auto)
-                  setStatus("ข้อความเป็น string ไม่ใช่ JSON ซ้อน", true);
-                return;
+
+          if (endIndex !== -1) {
+            const candidate = str.substring(startIndex, endIndex + 1);
+            try {
+              const obj = JSON.parse(candidate);
+              // Check if it's stringified inside
+              if (typeof obj === "string") {
+                try {
+                  return JSON.parse(obj);
+                } catch (e) {
+                  return obj;
+                }
               }
+              return obj;
+            } catch (e2) {
+              throw e2;
             }
-            jsonArea.value = JSON.stringify(inner, null, 2);
-            outputDiv.innerHTML = syntaxHighlight(inner);
-            resultBox.style.display = "block";
-            if (!auto) setStatus("แปลงโดยตัดเนื้อหาอื่น ๆ รอบ ๆ ข้อความ JSON");
-            return;
-          } catch (err2) {
-            if (!auto) setStatus("ไม่สามารถแปลงได้: " + err.message, true);
-            console.error(err2);
-            return;
           }
-        }
-      }
 
-      function convertToString() {
-        const jsonText = document.getElementById("jsonData").value.trim();
-        const inputArea = document.getElementById("inputData");
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
-        const status = document.getElementById("status");
-        if (!jsonText) {
-          setStatus("กรุณาใส่ JSON ในกรอบขวาก่อนครับ", true);
-          return;
-        }
-        try {
-          const parsed = JSON.parse(jsonText);
-          const result = JSON.stringify(parsed);
-          inputArea.value = result;
-          outputDiv.textContent = result;
-          resultBox.style.display = "block";
-          setStatus("แปลงเป็น String แล้ว");
-        } catch (error) {
-          setStatus("JSON ในกรอบขวาไม่ถูกต้อง: " + error.message, true);
-          console.error(error);
-        }
-      }
+          throw new Error("Complex parsing failed");
+        },
+      };
 
-      function copyResult() {
-        const outputDiv = document.getElementById("output");
-        const btn = document.getElementById("copyBtn");
-        if (!outputDiv) return;
-        const text = outputDiv.textContent || "";
-        if (!navigator.clipboard) {
-          // fallback
-          try {
-            const area = document.createElement("textarea");
-            area.value = text;
-            document.body.appendChild(area);
-            area.select();
-            document.execCommand("copy");
-            document.body.removeChild(area);
-            const prev = btn.textContent;
-            btn.textContent = "Copied";
-            setTimeout(() => (btn.textContent = prev), 1500);
-          } catch (e) {
-            alert("ไม่สามารถคัดลอกได้");
-          }
-          return;
-        }
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            const prev = btn.textContent;
-            btn.textContent = "Copied";
-            setTimeout(() => (btn.textContent = prev), 1500);
-          })
-          .catch(() => {
-            alert("ไม่สามารถคัดลอกได้");
-          });
-      }
+      /**
+       * JSON Tree Viewer Renderer
+       */
+      const JsonViewer = {
+        render: (data) => {
+          if (data === null) return JsonViewer.createSpan("null", "jv-null");
+          if (typeof data === "number")
+            return JsonViewer.createSpan(data, "jv-number");
+          if (typeof data === "boolean")
+            return JsonViewer.createSpan(data, "jv-boolean");
+          if (typeof data === "string")
+            return JsonViewer.createSpan(`"${data}"`, "jv-string");
 
-      function copyPane(id) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const text = el.value !== undefined ? el.value : el.textContent || "";
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard
-            .writeText(text)
-            .then(() => setStatus("คัดลอกแล้ว"));
-        } else {
-          try {
-            const area = document.createElement("textarea");
-            area.value = text;
-            document.body.appendChild(area);
-            area.select();
-            document.execCommand("copy");
-            document.body.removeChild(area);
-            setStatus("คัดลอกแล้ว");
-          } catch (e) {
-            setStatus("คัดลอกไม่สำเร็จ", true);
-          }
-        }
-      }
+          if (Array.isArray(data) || typeof data === "object") {
+            const isArray = Array.isArray(data);
+            const isEmpty = isArray
+              ? data.length === 0
+              : Object.keys(data).length === 0;
 
-      function togglePaneCollapse(id) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        // find closest .pane container
-        let pane = el.closest && el.closest(".pane");
-        if (!pane) pane = el;
-        pane.classList.toggle("collapsed");
-      }
+            const container = document.createElement("div");
 
-      function setStatus(message, isError) {
-        const status = document.getElementById("status");
-        const resultBox = document.getElementById("resultContainer");
-        if (!status) return;
-        status.textContent = message;
-        if (isError) status.classList.add("error");
-        else status.classList.remove("error");
-        // ensure result area is visible so status is seen
-        if (resultBox) resultBox.style.display = "block";
-        // clear non-error messages after 3s
-        if (!isError) {
-          clearTimeout(setStatus._t);
-          setStatus._t = setTimeout(() => (status.textContent = ""), 3000);
-        }
-      }
-
-      function formatJson() {
-        const jsonArea = document.getElementById("jsonData");
-        const outputDiv = document.getElementById("output");
-        const resultBox = document.getElementById("resultContainer");
-        const text = jsonArea.value.trim();
-        if (!text) {
-          alert("กรุณาใส่ JSON ในกรอบขวาก่อนครับ");
-          return;
-        }
-        try {
-          const parsed = JSON.parse(text);
-          const pretty = customJsonFormat(parsed, 2);
-          jsonArea.value = pretty;
-          outputDiv.innerHTML = syntaxHighlight(parsed);
-          resultBox.style.display = "block";
-          setStatus("จัด JSON แล้ว");
-        } catch (err) {
-          setStatus("JSON ไม่ถูกต้อง: " + err.message, true);
-          console.error(err);
-        }
-      }
-
-      // Custom pretty print like jsonformatter.org
-      function customJsonFormat(obj, indent = 2) {
-        const gap = " ".repeat(indent);
-        function format(val, level) {
-          if (val === null) return "null";
-          if (typeof val === "number" || typeof val === "boolean")
-            return String(val);
-          if (typeof val === "string") return JSON.stringify(val);
-          if (Array.isArray(val)) {
-            if (val.length === 0) return "[]";
-            let out = "[\n";
-            for (let i = 0; i < val.length; i++) {
-              out += gap.repeat(level + 1) + format(val[i], level + 1);
-              if (i < val.length - 1) out += ",";
-              out += "\n";
+            // Preview Header
+            const start = document.createElement("span");
+            if (isEmpty) {
+              start.innerHTML = isArray ? "[]" : "{}";
+              container.appendChild(start);
+              return container;
             }
-            out += gap.repeat(level) + "]";
-            return out;
+
+            start.className = isArray ? "jv-array-start" : "jv-object-start";
+            start.innerHTML =
+              `<span class="jv-toggle">▼</span>` + (isArray ? "[" : "{");
+
+            const content = document.createElement("div");
+            content.className = "jv-node";
+
+            const keys = Object.keys(data);
+            keys.forEach((key, idx) => {
+              const line = document.createElement("div");
+              if (!isArray) {
+                line.appendChild(JsonViewer.createSpan(`"${key}"`, "jv-key"));
+                line.appendChild(document.createTextNode(": "));
+              }
+
+              line.appendChild(JsonViewer.render(data[key]));
+              if (idx < keys.length - 1)
+                line.appendChild(document.createTextNode(","));
+
+              content.appendChild(line);
+            });
+
+            const end = document.createElement("div");
+            end.textContent = isArray ? "]" : "}";
+
+            // Toggle Logic
+            start.onclick = (e) => {
+              e.stopPropagation();
+              const isHidden = content.classList.contains("hidden");
+              if (isHidden) {
+                // Expand
+                content.classList.remove("hidden");
+                start.querySelector(".jv-toggle").classList.remove("collapsed");
+                start.querySelector(".jv-toggle").textContent = "▼";
+                start.querySelector(".jv-preview")?.remove();
+              } else {
+                // Collapse
+                content.classList.add("hidden");
+                start.querySelector(".jv-toggle").classList.add("collapsed");
+                start.querySelector(".jv-toggle").textContent = "▶";
+
+                // Add preview
+                const preview = document.createElement("span");
+                preview.className = "jv-collapsed-preview";
+                const count = isArray
+                  ? data.length + " items"
+                  : keys.length + " keys";
+                preview.textContent = isArray
+                  ? `... ${count} ...`
+                  : `... ${count} ...`;
+                preview.classList.add("jv-preview");
+                start.appendChild(preview);
+              }
+            };
+
+            container.appendChild(start);
+            container.appendChild(content);
+            container.appendChild(end);
+            return container;
           }
-          // object
-          const keys = Object.keys(val);
-          if (keys.length === 0) return "{}";
-          let out = "{\n";
-          keys.forEach((k, i) => {
-            out +=
-              gap.repeat(level + 1) +
-              JSON.stringify(k) +
-              ": " +
-              format(val[k], level + 1);
-            if (i < keys.length - 1) out += ",";
-            out += "\n";
-          });
-          out += gap.repeat(level) + "}";
-          return out;
-        }
-        return format(obj, 0);
-      }
+        },
+
+        createSpan: (text, className) => {
+          const span = document.createElement("span");
+          span.textContent = text;
+          span.className = className;
+          return span;
+        },
+      };
+
+      // Initialize
+      window.addEventListener("DOMContentLoaded", App.init);
     </script>
   </body>
 </html>
