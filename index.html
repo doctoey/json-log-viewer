@@ -1,788 +1,1195 @@
 <!doctype html>
-<html lang="th">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ตัวแปลง JSON Log ให้อ่านง่าย (Enhanced)</title>
+    <title>JSON Log Viewer PROMAX</title>
+    <!-- Use Inter font for UI and JetBrains Mono for code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
-        --bg: #0f1419;
-        --panel: #15202b;
-        --muted: #8899a6;
-        --text: #e6eef8;
-        --accent: #1d9bf0;
-        --accent-hover: #1a8cd8;
-        --accent-2: #2aa7ff;
-        --success: #00ba7c;
-        --error: #f91880;
-        --key: #ff6b6b;
-        --string: #7ee787;
-        --number: #ffca6b;
-        --boolean: #1da1f2;
-        --null: #b085ff;
-        --border: rgba(255, 255, 255, 0.11);
-        --glass-bg: rgba(21, 32, 43, 0.98);
+        /* Tokyo Night / Cyberpunk Inspired Theme */
+        --bg: #1a1b26;
+        --panel: #24283b;
+        --border: #414868;
+        --text-primary: #c0caf5;
+        --text-secondary: #787c99;
+        --accent: #7aa2f7;
+        --accent-hover: #3d59a1;
+        --success: #9ece6a;
+        --error: #f7768e;
+        --warning: #ff9e64;
+
+        /* Vibrant Syntax Highlighting */
+        --sh-key: #f7768e; /* Neon Pink */
+        --sh-string: #9ece6a; /* Neon Green */
+        --sh-number: #ff9e64; /* Neon Orange */
+        --sh-boolean: #bb9af7; /* Neon Purple */
+        --sh-null: #7dcfff; /* Neon Cyan */
+
+        --glass-bg: rgba(36, 40, 59, 0.85);
       }
 
       * {
         box-sizing: border-box;
+        outline: none;
       }
 
       body {
         font-family:
-          "Sarabun",
-          Inter,
+          "Inter",
           system-ui,
           -apple-system,
           sans-serif;
-        background: linear-gradient(120deg, #0f1419 0%, #1d2636 100%);
-        color: var(--text);
-        padding: 28px 0;
-        min-height: 100vh;
+        background-color: var(--bg);
+        color: var(--text-primary);
         margin: 0;
-      }
-
-      /* Helpers */
-      .hidden {
-        display: none !important;
-      }
-      .flex {
+        min-height: 100vh;
         display: flex;
-      }
-      .items-center {
-        align-items: center;
-      }
-      .justify-between {
-        justify-content: space-between;
-      }
-      .gap-2 {
-        gap: 8px;
-      }
-      .mt-4 {
-        margin-top: 16px;
+        flex-direction: column;
       }
 
-      /* Layout */
+      /* Scrollbar */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--bg);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 5px;
+        border: 2px solid var(--bg);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
       .container {
-        max-width: 1200px;
+        max-width: 1400px;
         margin: 0 auto;
-        padding: 40px 36px;
-        background-color: var(--panel);
-        border-radius: 32px;
-        border: 1.5px solid var(--border);
-        box-shadow: 0 16px 48px rgba(29, 155, 240, 0.16);
-        backdrop-filter: blur(18px);
+        padding: 32px 24px;
+        width: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      /* Header */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
       }
 
       h1 {
-        text-align: center;
-        font-size: 2.2rem;
-        margin-bottom: 32px;
-        color: var(--text);
+        margin: 0;
+        font-size: 24px;
         display: flex;
         align-items: center;
-        justify-content: center;
         gap: 12px;
-        text-shadow: 0 2px 12px rgba(29, 155, 240, 0.1);
+        background: linear-gradient(
+          90deg,
+          var(--text-primary),
+          var(--text-secondary)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
 
-      /* Editor Areas */
-      .editor-row {
-        display: flex;
-        gap: 28px;
-        margin-top: 18px;
-        justify-content: center;
+      .pro-badge {
+        font-size: 12px;
+        background: var(--accent);
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        -webkit-text-fill-color: initial; /* Fix visibility issue */
+        text-shadow: none;
+        font-weight: 700;
+        box-shadow: 0 2px 10px rgba(122, 162, 247, 0.3);
       }
 
-      .pane {
+      /* Main Grid */
+      .main-grid {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 24px;
         flex: 1;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1.5px solid rgba(29, 155, 240, 0.09);
-        border-radius: 20px;
-        padding: 24px;
+        min-height: 0; /* Important for scroll */
+      }
+
+      /* Panels */
+      .panel {
+        background: var(--panel);
+        border-radius: 16px;
+        border: 1px solid var(--border);
         display: flex;
         flex-direction: column;
-        transition: all 0.3s ease;
-        position: relative;
-        min-width: 0; /* Prevents flex overflow */
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
       }
 
-      .pane.collapsed .expandable-content {
-        display: none;
-      }
-
-      textarea {
-        width: 100%;
-        height: 200px;
-        background: rgba(0, 0, 0, 0.2);
-        border: 1.5px solid rgba(29, 155, 240, 0.13);
-        border-radius: 12px;
-        color: var(--text);
+      .panel-header {
         padding: 16px;
-        font-family: monospace;
-        font-size: 14px;
-        resize: vertical;
-        transition: all 0.2s;
-      }
-
-      textarea:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15);
-      }
-
-      /* Buttons */
-      .btn {
-        padding: 10px 20px;
-        border-radius: 99px;
-        border: none;
-        background: linear-gradient(90deg, var(--accent), var(--accent-2));
-        color: white;
-        font-weight: 700;
-        cursor: pointer;
-        transition:
-          transform 0.1s,
-          box-shadow 0.2s;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-      }
-      .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(29, 155, 240, 0.3);
-      }
-      .btn:active {
-        transform: scale(0.98);
-      }
-
-      .btn-ghost {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      .btn-ghost:hover {
-        background: rgba(255, 255, 255, 0.1);
-      }
-
-      .tool-btn {
-        padding: 6px 12px;
-        font-size: 13px;
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: var(--muted);
-        border: 1px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .tool-btn:hover {
-        background: rgba(29, 155, 240, 0.1);
-        color: var(--accent);
-      }
-
-      /* Result Box */
-      .result-box {
-        margin-top: 28px;
-        background: var(--glass-bg);
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 24px;
-        display: none;
-        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      }
-
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .result-header {
+        border-bottom: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.02);
       }
 
-      #status {
+      .panel-title {
+        font-weight: 600;
         font-size: 14px;
-        color: var(--muted);
-      }
-      #status.error {
-        color: var(--error);
-      }
-      #status.success {
-        color: var(--success);
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
-      /* JSON Viewer / Tree */
-      .json-viewer {
-        font-family: "Menlo", "Monaco", monospace;
+      .panel-body {
+        flex: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      /* Inputs */
+      .input-wrapper {
+        flex: 1;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      textarea {
+        flex: 1;
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        padding: 16px;
+        font-family: "JetBrains Mono", monospace;
         font-size: 13px;
         line-height: 1.6;
-        overflow-x: auto;
+        resize: none;
       }
-      .jv-node {
-        margin-left: 20px;
-        border-left: 1px solid rgba(255, 255, 255, 0.05);
-        padding-left: 5px;
-      }
-      .jv-toggle {
-        cursor: pointer;
-        user-select: none;
-        display: inline-block;
-        margin-right: 4px;
-        color: var(--muted);
-        transition: transform 0.15s;
-        width: 14px;
-        text-align: center;
-      }
-      .jv-toggle.collapsed {
-        transform: rotate(-90deg);
-      }
-      .jv-key {
-        color: var(--key);
-        margin-right: 4px;
-      }
-      .jv-string {
-        color: var(--string);
-        word-break: break-all;
-      }
-      .jv-number {
-        color: var(--number);
-      }
-      .jv-boolean {
-        color: var(--boolean);
-      }
-      .jv-null {
-        color: var(--null);
-      }
-      .jv-object-start,
-      .jv-array-start {
-        color: var(--text);
-        cursor: pointer;
-      }
-      .jv-object-start:hover,
-      .jv-array-start:hover {
-        color: var(--accent);
-      }
-      .jv-collapsed-preview {
-        color: var(--muted);
-        font-style: italic;
-        font-size: 12px;
-        margin-left: 4px;
+      textarea::placeholder {
+        color: rgba(139, 152, 165, 0.4);
       }
 
-      @media (max-width: 768px) {
-        .editor-row {
-          flex-direction: column;
+      .drop-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(29, 155, 240, 0.1);
+        backdrop-filter: blur(4px);
+        display: none; /* Flex when active */
+        justify-content: center;
+        align-items: center;
+        border: 2px dashed var(--accent);
+        pointer-events: none;
+      }
+      .drag-active .drop-overlay {
+        display: flex;
+      }
+
+      /* Buttons & Tools */
+      .btn {
+        height: 32px;
+        padding: 0 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+        border: none;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-secondary);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-primary);
+      }
+
+      .btn-icon {
+        padding: 0;
+        width: 32px;
+        justify-content: center;
+      }
+
+      /* Search Bar */
+      .search-box {
+        position: relative;
+        flex: 1;
+        max-width: 300px;
+      }
+      .search-box input {
+        width: 100%;
+        height: 32px;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0 32px 0 12px;
+        color: var(--text-primary);
+        font-size: 13px;
+      }
+      .search-box svg {
+        position: absolute;
+        right: 10px;
+        top: 8px;
+        color: var(--text-secondary);
+        pointer-events: none;
+      }
+
+      /* JSON Tree Viewer */
+      .json-tree {
+        padding: 16px;
+        overflow: auto;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        padding-bottom: 50px;
+      }
+
+      .node {
+        display: flex;
+        flex-direction: column;
+      }
+      .line {
+        display: flex;
+        align-items: flex-start;
+      }
+
+      .toggle {
+        cursor: pointer;
+        user-select: none;
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-secondary);
+        transition: transform 0.15s ease;
+      }
+      .toggle:hover {
+        color: var(--text-primary);
+      }
+      .toggle.collapsed {
+        transform: rotate(-90deg);
+      }
+      .toggle.leaf {
+        visibility: hidden;
+      }
+
+      .key {
+        color: var(--sh-key);
+        margin-right: 6px;
+        cursor: pointer;
+      }
+      .key:hover {
+        text-decoration: underline;
+        opacity: 0.8;
+      }
+
+      .separator {
+        color: var(--text-secondary);
+        margin-right: 6px;
+      }
+
+      .value {
+        cursor: pointer;
+        padding: 0 4px;
+        border-radius: 4px;
+        transition: background 0.1s;
+      }
+      .value:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+
+      .string {
+        color: var(--sh-string);
+        word-break: break-all;
+      }
+      .number {
+        color: var(--sh-number);
+      }
+      .boolean {
+        color: var(--sh-boolean);
+      }
+      .null {
+        color: var(--sh-null);
+      }
+
+      .meta {
+        color: var(--text-secondary);
+        font-style: italic;
+        font-size: 12px;
+        margin-left: 8px;
+      }
+
+      .hidden-node {
+        display: none;
+      }
+      .match-highlight {
+        background: rgba(255, 212, 0, 0.3);
+        color: #fff;
+        border-radius: 2px;
+      }
+
+      /* Toast Notification */
+      #toast {
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100px);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 12px 24px;
+        border-radius: 50px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        opacity: 0;
+      }
+      #toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      #toast.success i {
+        color: var(--success);
+      }
+      #toast.error i {
+        color: var(--error);
+      }
+
+      /* Loading State */
+      .loader {
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-left-color: var(--accent);
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+      .loading .loader {
+        display: block;
+      }
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
         }
-        .pane {
-          width: 100%;
+      }
+
+      /* Empty State */
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--text-secondary);
+        font-size: 14px;
+        opacity: 0.5;
+      }
+
+      @media (max-width: 900px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto 1fr;
+        }
+        .container {
+          padding: 16px;
+          height: auto;
+        }
+        body {
+          height: auto;
+        }
+        textarea {
+          height: 200px;
         }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-          <rect
-            x="3"
-            y="3"
-            width="18"
-            height="18"
-            rx="4"
-            fill="var(--accent)"
-            fill-opacity="0.2"
-          />
-          <path
-            d="M8 16l8-8M8 8h8v8"
-            stroke="var(--accent)"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-        JSON Log Viewer
-      </h1>
-
-      <!-- Editors -->
-      <div class="editor-row">
-        <!-- Main Input -->
-        <div class="pane" id="pane-input">
-          <div class="flex justify-between items-center mb-2">
-            <label
-              class="font-bold flex items-center gap-2"
-              style="color: var(--string)"
+      <header>
+        <h1>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <rect
+              x="3"
+              y="3"
+              width="18"
+              height="18"
+              rx="6"
+              fill="#1d9bf0"
+              fill-opacity="0.2"
+            />
+            <path
+              d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              stroke="#1d9bf0"
+              stroke-width="2"
+            />
+            <path d="M14 2v6h6" stroke="#1d9bf0" stroke-width="2" />
+            <path
+              d="M8 13h8"
+              stroke="#1d9bf0"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              d="M8 17h5"
+              stroke="#1d9bf0"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+          JSON Log Viewer
+          <span class="pro-badge">PROMAX</span>
+        </h1>
+        <div style="display: flex; gap: 8px">
+          <a
+            href="https://github.com/doctoey/json-log-viewer"
+            target="_blank"
+            class="btn btn-secondary"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              style="margin-right: 6px"
             >
+              <path
+                d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            GitHub
+          </a>
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <!-- LEFT PANEL: INPUT -->
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path
-                  d="M7 8h10M7 12h10M7 16h6"
+                  d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"
+                />
+                <path
+                  d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+                  stroke="currentColor"
+                  stroke-width="2"
                 />
               </svg>
-              Input Data
-            </label>
-            <div class="flex gap-2">
+              Input
+            </span>
+            <div class="flex gap-2" style="display: flex; gap: 8px">
+              <div class="loader" id="spinner"></div>
               <button
-                class="tool-btn"
-                onclick="
-                  Utils.copyToClipboard(
-                    document.getElementById('inputData').value,
-                    this,
-                  )
-                "
+                class="btn btn-secondary btn-icon"
+                onclick="App.clear()"
+                title="Clear"
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 9h6v6H9z" fill="currentColor" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
                 </svg>
-                Copy
-              </button>
-              <button class="tool-btn" onclick="Utils.clearInput('inputData')">
-                Clear
               </button>
             </div>
           </div>
-          <textarea
-            id="inputData"
-            placeholder="Paste JSON string, Log line, or Nested JSON here..."
-          ></textarea>
-          <div class="expandable-content">
-            <p style="font-size: 12px; color: var(--muted); margin-top: 8px">
-              Supports: Plain JSON, JSON inside String, Log lines with JSON
-              substring.
-            </p>
-            <div class="mt-4 flex gap-2">
-              <button class="btn" onclick="App.processInput(false)">
-                Convert JSON
-              </button>
+          <div class="panel-body input-wrapper" id="dropZone">
+            <textarea
+              id="inputData"
+              placeholder="Paste JSON, Drag & Drop file, or type here..."
+            ></textarea>
+            <div class="drop-overlay">
+              <span style="color: var(--accent); font-weight: 600"
+                >Drop JSON File Here</span
+              >
             </div>
-          </div>
-        </div>
 
-        <!-- Nested Input (Specialized) -->
-        <div class="pane" id="pane-nested">
-          <div class="flex justify-between items-center mb-2">
-            <label
-              class="font-bold flex items-center gap-2"
-              style="color: var(--key)"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                  stroke="currentColor"
-                  stroke-width="2"
-                />
-              </svg>
-              Nested Value
-            </label>
-            <div class="flex gap-2">
-              <button
-                class="tool-btn"
-                onclick="
-                  Utils.copyToClipboard(
-                    document.getElementById('inputNested').value,
-                    this,
-                  )
-                "
-              >
-                Copy
-              </button>
-              <button
-                class="tool-btn"
-                onclick="Utils.clearInput('inputNested')"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          <textarea
-            id="inputNested"
-            placeholder='{"value": "{\"log\": ...}"}'
-          ></textarea>
-          <div class="expandable-content">
-            <p style="font-size: 12px; color: var(--key); margin-top: 8px">
-              Extracts JSON from `value` field automatically.
-            </p>
-            <div class="mt-4">
-              <button
-                class="btn"
-                style="background: linear-gradient(90deg, #ff6b6b, #ff8787)"
-                onclick="App.processNested(false)"
-              >
-                Extract Nested
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Output / Result -->
-      <div id="resultContainer" class="result-box">
-        <div class="result-header">
-          <div id="status">Ready</div>
-          <div class="flex gap-2">
-            <button class="tool-btn" onclick="App.toggleViewMode()">
-              <span id="viewModeLabel">Show Plain</span>
-            </button>
-            <button
-              class="tool-btn"
-              id="copyResultBtn"
-              onclick="Utils.copyResult()"
-            >
-              Copy Result
-            </button>
-            <button
-              class="tool-btn"
-              onclick="
-                document.getElementById('resultContainer').style.display =
-                  'none'
+            <!-- Quick Actions Toolbar at bottom of input -->
+            <div
+              style="
+                padding: 12px;
+                border-top: 1px solid var(--border);
+                background: rgba(0, 0, 0, 0.1);
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
               "
             >
-              Close
-            </button>
+              <button class="btn btn-secondary" onclick="App.formatInput()">
+                Format
+              </button>
+              <button class="btn btn-primary" onclick="App.process()">
+                Process
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Tree View -->
-        <div id="jsonTreeOutput" class="json-viewer"></div>
+        <!-- RIGHT PANEL: OUTPUT -->
+        <section class="panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M2 12h20M2 12l5-5m-5 5 5 5"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+              Viewer
+            </span>
 
-        <!-- Text View (Hidden by default) -->
-        <textarea
-          id="jsonTextOutput"
-          class="hidden"
-          style="height: 400px; font-size: 12px"
-        ></textarea>
+            <div class="search-box">
+              <input
+                type="text"
+                id="searchBox"
+                placeholder="Filter keys or values..."
+                onkeyup="Viewer.filter(this.value)"
+              />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+                <path
+                  d="m21 21-4.35-4.35"
+                  stroke="currentColor"
+                  stroke-width="2"
+                />
+              </svg>
+            </div>
+
+            <div style="display: flex; gap: 8px">
+              <button
+                class="btn btn-secondary"
+                onclick="Viewer.expandAll()"
+                title="Expand All"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn btn-secondary"
+                onclick="Viewer.collapseAll()"
+                title="Collapse All"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn btn-secondary"
+                onclick="Utils.copyToClipboard(App.rawJson)"
+                title="Copy Raw JSON"
+              >
+                Copy JSON
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-body" style="background: rgba(0, 0, 0, 0.1)">
+            <div id="jsonTree" class="json-tree">
+              <div class="empty-state">
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  style="margin-bottom: 16px; opacity: 0.5"
+                >
+                  <path
+                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  />
+                  <path d="M14 2v6h6" stroke="currentColor" stroke-width="2" />
+                  <path d="M16 13H8" stroke="currentColor" stroke-width="2" />
+                  <path d="M16 17H8" stroke="currentColor" stroke-width="2" />
+                  <path d="M10 9H8" stroke="currentColor" stroke-width="2" />
+                </svg>
+                <span>Waiting for input...</span>
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              padding: 8px 16px;
+              border-top: 1px solid var(--border);
+              font-size: 12px;
+              color: var(--text-secondary);
+              display: flex;
+              justify-content: space-between;
+            "
+          >
+            <span id="pathDisplay">Path: (Click any item to copy path)</span>
+            <span id="itemCount">0 items</span>
+          </div>
+        </section>
       </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast">
+      <i id="toastIcon"></i>
+      <span id="toastMsg">Notification</span>
     </div>
 
     <script>
       /**
-       * Utility Functions
+       * Core Application Logic
        */
-      const Utils = {
-        copyToClipboard: async (text, btnElement) => {
-          if (!text) return;
+      const App = {
+        rawJson: null,
+        debounceTimer: null,
+
+        init: () => {
+          // Restore legacy state
+          const saved = localStorage.getItem("jsonviewer_content");
+          if (saved) {
+            document.getElementById("inputData").value = saved;
+            App.process();
+          }
+
+          // Drag & Drop
+          const dropZone = document.getElementById("dropZone");
+          const inputArea = document.getElementById("inputData");
+
+          ["dragenter", "dragover", "dragleave", "drop"].forEach(
+            (eventName) => {
+              dropZone.addEventListener(
+                eventName,
+                (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                },
+                false,
+              );
+            },
+          );
+
+          dropZone.addEventListener("dragenter", () =>
+            dropZone.classList.add("drag-active"),
+          );
+          dropZone.addEventListener("dragleave", () =>
+            dropZone.classList.remove("drag-active"),
+          );
+          dropZone.addEventListener("drop", (e) => {
+            dropZone.classList.remove("drag-active");
+            const file = e.dataTransfer.files[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (evt) => {
+                inputArea.value = evt.target.result;
+                App.process();
+              };
+              reader.readAsText(file);
+            }
+          });
+
+          // Auto save
+          inputArea.addEventListener("input", () => {
+            clearTimeout(App.debounceTimer);
+            App.debounceTimer = setTimeout(() => {
+              localStorage.setItem("jsonviewer_content", inputArea.value);
+              App.process();
+            }, 800);
+          });
+
+          // Paste handler
+          inputArea.addEventListener("paste", () => {
+            setTimeout(() => App.process(), 50);
+          });
+        },
+
+        process: () => {
+          const input = document.getElementById("inputData").value.trim();
+          if (!input) return;
+
+          document.getElementById("spinner").style.display = "block";
+
+          // Use timeout to allow UI to render spinner
+          setTimeout(() => {
+            try {
+              let json = App.parse(input);
+              // Apply deep parsing to expand nested JSON strings
+              json = App.deepParse(json);
+
+              App.rawJson = JSON.stringify(json, null, 2);
+              Viewer.render(json);
+              Utils.toast("Processed successfully", "success");
+            } catch (e) {
+              // Don't error hard on typing, just wait
+              console.log("Parsing warning:", e);
+            } finally {
+              document.getElementById("spinner").style.display = "none";
+            }
+          }, 10);
+        },
+
+        formatInput: () => {
+          const input = document.getElementById("inputData");
           try {
-            await navigator.clipboard.writeText(text);
-            const originalText = btnElement.innerText;
-            btnElement.innerText = "Copied!";
-            btnElement.style.color = "var(--success)";
-            setTimeout(() => {
-              btnElement.innerText = originalText;
-              btnElement.style.color = "";
-            }, 2000);
-            App.setStatus("Copied to clipboard", "success");
-          } catch (err) {
-            // Fallback
-            const textArea = document.createElement("textarea");
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            App.setStatus("Copied (fallback)", "success");
+            let parsed = App.parse(input.value);
+            parsed = App.deepParse(parsed);
+            input.value = JSON.stringify(parsed, null, 2);
+            App.process();
+          } catch (e) {
+            Utils.toast("Invalid JSON", "error");
           }
         },
-        clearInput: (id) => {
-          document.getElementById(id).value = "";
-          document.getElementById(id).focus();
+
+        clear: () => {
+          document.getElementById("inputData").value = "";
+          localStorage.removeItem("jsonviewer_content");
+          document.getElementById("jsonTree").innerHTML =
+            '<div class="empty-state">Cleared</div>';
+          document.getElementById("itemCount").textContent = "0 items";
         },
-        copyResult: () => {
-          // Copy the raw JSON
-          const jsonText = document.getElementById("jsonTextOutput").value;
-          Utils.copyToClipboard(
-            jsonText,
-            document.getElementById("copyResultBtn"),
-          );
+
+        // Robust Parser (same smart logic as V1, but cleaner)
+        parse: (str) => {
+          if (typeof str !== "string") return str;
+
+          // 1. Try straightforward parse
+          try {
+            const parsed = JSON.parse(str);
+            // Handle double-stringified JSON
+            if (typeof parsed === "string") {
+              try {
+                return JSON.parse(parsed);
+              } catch {
+                return parsed;
+              }
+            }
+            return parsed;
+          } catch (e) {}
+
+          // 2. Extract JSON from Log Line
+          // Look for first { or [
+          const start = str.search(/[{}\[]/);
+          if (start > -1) {
+            let stack = 0;
+            for (let i = start; i < str.length; i++) {
+              if (str[i] === "{" || str[i] === "[") stack++;
+              if (str[i] === "}" || str[i] === "]") {
+                stack--;
+                if (stack === 0) {
+                  const candidate = str.substring(start, i + 1);
+                  try {
+                    let res = JSON.parse(candidate);
+                    if (typeof res === "string") {
+                      try {
+                        return JSON.parse(res);
+                      } catch {
+                        return res;
+                      }
+                    }
+                    return res;
+                  } catch (e2) {}
+                  break;
+                }
+              }
+            }
+          }
+
+          // 3. Fallback: Double quoted string?
+          if (str.startsWith('"') && str.endsWith('"')) {
+            try {
+              return JSON.parse(JSON.parse(str));
+            } catch (e3) {}
+          }
+
+          throw new Error("Unable to parse JSON");
+        },
+
+        // Recursively walk through object and try to parse strings that look like JSON
+        deepParse: (data) => {
+          if (typeof data === "string") {
+            const trimmed = data.trim();
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+              try {
+                const parsed = JSON.parse(data);
+                return App.deepParse(parsed);
+              } catch (e) {
+                return data;
+              }
+            }
+            return data;
+          }
+
+          if (Array.isArray(data)) {
+            return data.map((item) => App.deepParse(item));
+          }
+
+          if (typeof data === "object" && data !== null) {
+            const newObj = {};
+            for (const key in data) {
+              newObj[key] = App.deepParse(data[key]);
+            }
+            return newObj;
+          }
+
+          return data;
         },
       };
 
       /**
-       * Main Application Logic
+       * Viewer & Filtering Logic
        */
-      const App = {
-        state: {
-          currentJson: null,
-          viewMode: "tree", // or 'text'
+      const Viewer = {
+        rootEl: document.getElementById("jsonTree"),
+
+        render: (data) => {
+          Viewer.rootEl.innerHTML = "";
+
+          if (data === null || data === undefined) {
+            Viewer.rootEl.innerHTML = '<span class="null">null</span>';
+            return;
+          }
+
+          const tree = Viewer.createNode(data, "root");
+          Viewer.rootEl.appendChild(tree);
+
+          // Stats
+          const count = Array.isArray(data)
+            ? data.length + " items"
+            : Object.keys(data).length + " keys";
+          document.getElementById("itemCount").textContent = count;
         },
 
-        init: () => {
-          // Auto-convert on paste
-          ["inputData", "inputNested"].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el) {
-              el.addEventListener("paste", () => {
-                setTimeout(() => {
-                  if (id === "inputNested") App.processNested(true);
-                  else App.processInput(true);
-                }, 50);
+        // Recursive node creator
+        createNode: (data, path) => {
+          const type = Array.isArray(data) ? "array" : typeof data;
+          const isObject = type === "object" && data !== null;
+          const isArray = type === "array";
+
+          const container = document.createElement("div");
+          container.className = "node";
+          container.dataset.path = path; // For filtering
+
+          // Value Node (Primitive)
+          if (!isObject && !isArray) {
+            const valEl = document.createElement("span");
+            valEl.className = `value ${type}`;
+            valEl.textContent =
+              data === null ? "null" : type === "string" ? `"${data}"` : data;
+            valEl.onclick = (e) => {
+              e.stopPropagation();
+              Utils.copyToClipboard(String(data));
+              Utils.showPath(path);
+            };
+            // Allow text searching on this node
+            container.dataset.filterText = String(data).toLowerCase();
+            container.appendChild(valEl);
+            return container;
+          }
+
+          // Complex Node (Object/Array)
+          const isEmpty = isArray
+            ? data.length === 0
+            : Object.keys(data).length === 0;
+          const startChar = isArray ? "[" : "{";
+          const endChar = isArray ? "]" : "}";
+
+          const line = document.createElement("div");
+          line.className = "line";
+
+          // Toggle Arrow
+          const toggle = document.createElement("span");
+          toggle.className = isEmpty ? "toggle leaf" : "toggle";
+          toggle.textContent = "▼";
+          if (!isEmpty) {
+            toggle.onclick = (e) => {
+              e.stopPropagation();
+              const childrenDiv = container.querySelector(".children");
+              const isCollapsed = toggle.classList.toggle("collapsed");
+              childrenDiv.style.display = isCollapsed ? "none" : "flex";
+
+              // Preview
+              const preview = line.querySelector(".meta");
+              if (preview)
+                preview.style.display = isCollapsed ? "inline" : "none";
+            };
+          }
+          line.appendChild(toggle);
+
+          // Open Bracket
+          const label = document.createElement("span");
+          label.className = "key";
+          label.textContent = startChar;
+          label.onclick = (e) => {
+            Utils.showPath(path);
+            Utils.copyToClipboard(path);
+          };
+          line.appendChild(label);
+
+          // Preview for collapsed state
+          if (!isEmpty) {
+            const preview = document.createElement("span");
+            preview.className = "meta";
+            preview.style.display = "none";
+            const size = isArray ? data.length : Object.keys(data).length;
+            preview.textContent = `${size} ${isArray ? "items" : "keys"}`;
+            line.appendChild(preview);
+          }
+
+          container.appendChild(line);
+
+          // Children Container
+          if (!isEmpty) {
+            const children = document.createElement("div");
+            children.className = "children";
+            children.style.display = "flex";
+            children.style.flexDirection = "column";
+            children.style.paddingLeft = "12px";
+            children.style.borderLeft = "1px solid rgba(255,255,255,0.05)";
+
+            // Render Children
+            if (isArray) {
+              data.forEach((item, idx) => {
+                const childPath = `${path}[${idx}]`;
+                const row = document.createElement("div");
+                row.style.display = "flex";
+
+                const childNode = Viewer.createNode(item, childPath);
+                row.appendChild(childNode);
+                children.appendChild(row);
               });
+            } else {
+              Object.entries(data).forEach(([key, val]) => {
+                const safeKey = /^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)
+                  ? key
+                  : `["${key}"]`;
+                const childPath = path === "root" ? key : `${path}.${safeKey}`;
+
+                const row = document.createElement("div");
+                row.className = "node-row";
+                row.style.display = "flex";
+
+                // Key Label
+                const keyEl = document.createElement("span");
+                keyEl.className = "key";
+                keyEl.textContent = `"${key}"`;
+                keyEl.onclick = (e) => {
+                  e.stopPropagation();
+                  Utils.showPath(childPath);
+                  Utils.copyToClipboard(key);
+                };
+                row.appendChild(keyEl);
+
+                const sep = document.createElement("span");
+                sep.className = "separator";
+                sep.textContent = ":";
+                row.appendChild(sep);
+
+                const childNode = Viewer.createNode(val, childPath);
+
+                // Add filter text for Object Keys
+                childNode.dataset.keyText = key.toLowerCase();
+
+                row.appendChild(childNode);
+                children.appendChild(row);
+              });
+            }
+            container.appendChild(children);
+          }
+
+          // Closing Bracket
+          const closeLine = document.createElement("div");
+          closeLine.style.paddingLeft = "12px";
+          closeLine.textContent = endChar;
+          if (!isEmpty) container.appendChild(closeLine);
+
+          return container;
+        },
+
+        filter: (text) => {
+          const query = text.toLowerCase().trim();
+          const tree = document.getElementById("jsonTree");
+          const allNodes = tree.querySelectorAll(".node, .node-row"); // rows contain keys
+
+          // Remove highlights
+          tree.querySelectorAll(".match-highlight").forEach((el) => {
+            el.outerHTML = el.innerText;
+          });
+
+          if (!query) {
+            allNodes.forEach((n) => n.classList.remove("hidden-node"));
+            return;
+          }
+
+          // Simple strategy: Show node if it matches OR any of its children match
+          // We can use CSS to hide, but we need to walk the tree.
+
+          // 1. Reset
+          allNodes.forEach((n) => n.classList.add("hidden-node"));
+
+          // 2. Find matches
+          const valueMatches = tree.querySelectorAll(".value");
+          const keyMatches = tree.querySelectorAll(".key");
+
+          // Check Values
+          valueMatches.forEach((el) => {
+            if (el.textContent.toLowerCase().includes(query)) {
+              // Highlight
+              // el.innerHTML = el.textContent.replace(new RegExp(query, 'gi'), m => `<span class="match-highlight">${m}</span>`);
+
+              // Walk up and show parents
+              let p = el.parentElement;
+              while (p && p !== tree) {
+                p.classList.remove("hidden-node");
+                // also show siblings (key/separator)
+                if (p.classList.contains("node-row")) p.style.display = "flex";
+                p = p.parentElement;
+              }
+            }
+          });
+
+          // Check Keys
+          keyMatches.forEach((el) => {
+            if (el.textContent.toLowerCase().includes(query)) {
+              let p = el.parentElement; // row or line
+              while (p && p !== tree) {
+                p.classList.remove("hidden-node");
+                if (p.classList.contains("node-row")) p.style.display = "flex";
+                p = p.parentElement;
+              }
+
+              // Also show the value node associated with this key node
+              if (el.parentElement.classList.contains("node-row")) {
+                const valNode = el.parentElement.querySelector(".node");
+                if (valNode) valNode.classList.remove("hidden-node");
+              }
             }
           });
         },
 
-        setStatus: (msg, type = "normal") => {
-          const el = document.getElementById("status");
-          el.textContent = msg;
-          el.className =
-            type === "error" ? "error" : type === "success" ? "success" : "";
-
-          if (type !== "error") {
-            setTimeout(() => (el.textContent = ""), 4000);
-          }
+        expandAll: () => {
+          document
+            .querySelectorAll(".children")
+            .forEach((el) => (el.style.display = "flex"));
+          document.querySelectorAll(".toggle").forEach((el) => {
+            el.classList.remove("collapsed");
+            if (el.textContent === "▼") el.textContent = "▼";
+          });
+          document
+            .querySelectorAll(".meta")
+            .forEach((el) => (el.style.display = "none"));
         },
 
-        toggleViewMode: () => {
-          const treeEl = document.getElementById("jsonTreeOutput");
-          const textEl = document.getElementById("jsonTextOutput");
-          const label = document.getElementById("viewModeLabel");
-
-          if (App.state.viewMode === "tree") {
-            App.state.viewMode = "text";
-            treeEl.classList.add("hidden");
-            textEl.classList.remove("hidden");
-            label.textContent = "Show Tree";
-          } else {
-            App.state.viewMode = "tree";
-            treeEl.classList.remove("hidden");
-            textEl.classList.add("hidden");
-            label.textContent = "Show Plain";
-          }
-        },
-
-        displayResult: (jsonObj, msg) => {
-          App.state.currentJson = jsonObj;
-
-          document.getElementById("resultContainer").style.display = "block";
-          App.setStatus(msg || "Successfully converted", "success");
-
-          // 1. Render Tree
-          const treeContainer = document.getElementById("jsonTreeOutput");
-          treeContainer.innerHTML = "";
-          treeContainer.appendChild(JsonViewer.render(jsonObj));
-
-          // 2. Render Text
-          document.getElementById("jsonTextOutput").value = JSON.stringify(
-            jsonObj,
-            null,
-            2,
-          );
-        },
-
-        processInput: (isAuto) => {
-          const input = document.getElementById("inputData").value.trim();
-          if (!input) return;
-
-          try {
-            let result = App.parseRobust(input);
-            App.displayResult(
-              result,
-              isAuto ? "Auto-converted" : "Converted successfully",
-            );
-          } catch (e) {
-            console.error(e);
-            if (!isAuto)
-              App.setStatus("Could not parse JSON: " + e.message, "error");
-          }
-        },
-
-        processNested: (isAuto) => {
-          const input = document.getElementById("inputNested").value.trim();
-          if (!input) return;
-
-          try {
-            const outer = JSON.parse(input);
-            if (!outer.value) throw new Error("No 'value' field found in JSON");
-
-            let inner;
-            try {
-              inner = JSON.parse(outer.value);
-            } catch (e) {
-              throw new Error("The 'value' field is not valid JSON string");
-            }
-
-            App.displayResult(
-              inner,
-              isAuto ? "Auto-extracted nested JSON" : "Extracted successfully",
-            );
-          } catch (e) {
-            if (!isAuto) App.setStatus(e.message, "error");
-          }
-        },
-
-        // Helper to handle various "dirty" JSON scenarios
-        parseRobust: (str) => {
-          // 1. Try direct parse
-          try {
-            let obj = JSON.parse(str);
-            // If it's a string, try to parse it again (double stringified)
-            if (typeof obj === "string") {
-              try {
-                return JSON.parse(obj);
-              } catch (e) {
-                return obj;
-              } // Return string if not json
-            }
-            return obj;
-          } catch (e) {
-            /* continue */
-          }
-
-          // 2. Try to extract JSON from a log line (find { or [ and matching } or ])
-          const start = str.search(/[{}\[]/);
-          if (start === -1) throw new Error("No JSON object found");
-
-          // Simple stack-based extractor
-          let stack = 0;
-          let startIndex = start;
-          let endIndex = -1;
-
-          for (let i = start; i < str.length; i++) {
-            if (str[i] === "{" || str[i] === "[") stack++;
-            if (str[i] === "}" || str[i] === "]") {
-              stack--;
-              if (stack === 0) {
-                endIndex = i;
-                break;
-              }
-            }
-          }
-
-          if (endIndex !== -1) {
-            const candidate = str.substring(startIndex, endIndex + 1);
-            try {
-              const obj = JSON.parse(candidate);
-              // Check if it's stringified inside
-              if (typeof obj === "string") {
-                try {
-                  return JSON.parse(obj);
-                } catch (e) {
-                  return obj;
-                }
-              }
-              return obj;
-            } catch (e2) {
-              throw e2;
-            }
-          }
-
-          throw new Error("Complex parsing failed");
+        collapseAll: () => {
+          document
+            .querySelectorAll(".children")
+            .forEach((el) => (el.style.display = "none"));
+          document.querySelectorAll(".toggle:not(.leaf)").forEach((el) => {
+            el.classList.add("collapsed");
+          });
+          document
+            .querySelectorAll(".meta")
+            .forEach((el) => (el.style.display = "inline"));
         },
       };
 
       /**
-       * JSON Tree Viewer Renderer
+       * Utils & Toast
        */
-      const JsonViewer = {
-        render: (data) => {
-          if (data === null) return JsonViewer.createSpan("null", "jv-null");
-          if (typeof data === "number")
-            return JsonViewer.createSpan(data, "jv-number");
-          if (typeof data === "boolean")
-            return JsonViewer.createSpan(data, "jv-boolean");
-          if (typeof data === "string")
-            return JsonViewer.createSpan(`"${data}"`, "jv-string");
+      const Utils = {
+        toast: (msg, type = "success") => {
+          const el = document.getElementById("toast");
+          const icon = document.getElementById("toastIcon");
+          const text = document.getElementById("toastMsg");
 
-          if (Array.isArray(data) || typeof data === "object") {
-            const isArray = Array.isArray(data);
-            const isEmpty = isArray
-              ? data.length === 0
-              : Object.keys(data).length === 0;
+          el.className = `show ${type}`;
+          text.textContent = msg;
 
-            const container = document.createElement("div");
-
-            // Preview Header
-            const start = document.createElement("span");
-            if (isEmpty) {
-              start.innerHTML = isArray ? "[]" : "{}";
-              container.appendChild(start);
-              return container;
-            }
-
-            start.className = isArray ? "jv-array-start" : "jv-object-start";
-            start.innerHTML =
-              `<span class="jv-toggle">▼</span>` + (isArray ? "[" : "{");
-
-            const content = document.createElement("div");
-            content.className = "jv-node";
-
-            const keys = Object.keys(data);
-            keys.forEach((key, idx) => {
-              const line = document.createElement("div");
-              if (!isArray) {
-                line.appendChild(JsonViewer.createSpan(`"${key}"`, "jv-key"));
-                line.appendChild(document.createTextNode(": "));
-              }
-
-              line.appendChild(JsonViewer.render(data[key]));
-              if (idx < keys.length - 1)
-                line.appendChild(document.createTextNode(","));
-
-              content.appendChild(line);
-            });
-
-            const end = document.createElement("div");
-            end.textContent = isArray ? "]" : "}";
-
-            // Toggle Logic
-            start.onclick = (e) => {
-              e.stopPropagation();
-              const isHidden = content.classList.contains("hidden");
-              if (isHidden) {
-                // Expand
-                content.classList.remove("hidden");
-                start.querySelector(".jv-toggle").classList.remove("collapsed");
-                start.querySelector(".jv-toggle").textContent = "▼";
-                start.querySelector(".jv-preview")?.remove();
-              } else {
-                // Collapse
-                content.classList.add("hidden");
-                start.querySelector(".jv-toggle").classList.add("collapsed");
-                start.querySelector(".jv-toggle").textContent = "▶";
-
-                // Add preview
-                const preview = document.createElement("span");
-                preview.className = "jv-collapsed-preview";
-                const count = isArray
-                  ? data.length + " items"
-                  : keys.length + " keys";
-                preview.textContent = isArray
-                  ? `... ${count} ...`
-                  : `... ${count} ...`;
-                preview.classList.add("jv-preview");
-                start.appendChild(preview);
-              }
-            };
-
-            container.appendChild(start);
-            container.appendChild(content);
-            container.appendChild(end);
-            return container;
-          }
+          // clear prev
+          clearTimeout(Utils._toastTimer);
+          Utils._toastTimer = setTimeout(() => {
+            el.className = "";
+          }, 3000);
         },
 
-        createSpan: (text, className) => {
-          const span = document.createElement("span");
-          span.textContent = text;
-          span.className = className;
-          return span;
+        copyToClipboard: (text) => {
+          if (!text) return;
+          navigator.clipboard
+            .writeText(text)
+            .then(() => {
+              Utils.toast("Copied to clipboard!");
+            })
+            .catch(() => Utils.toast("Failed to copy", "error"));
+        },
+
+        showPath: (path) => {
+          const el = document.getElementById("pathDisplay");
+          // Cleanup root
+          let cleanPath = path.replace(/^root\./, "").replace(/^root/, "root");
+          el.innerHTML = `Path: <span class="string">${cleanPath}</span>`;
         },
       };
 
-      // Initialize
-      window.addEventListener("DOMContentLoaded", App.init);
+      // Boot
+      document.addEventListener("DOMContentLoaded", App.init);
     </script>
   </body>
 </html>
