@@ -444,6 +444,18 @@
           height: 200px;
         }
       }
+
+      .meta-val {
+        color: var(--text-secondary);
+        font-size: 11px;
+        margin-left: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 2px 6px;
+        border-radius: 4px;
+        user-select: text;
+        cursor: text;
+        vertical-align: middle;
+      }
     </style>
   </head>
   <body>
@@ -616,6 +628,43 @@
             <div style="display: flex; gap: 8px">
               <button
                 class="btn btn-secondary"
+                onclick="App.showTypeGen()"
+                title="Generate Types (TS/Go)"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M16 18L22 12L16 6"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M8 6L2 12L8 18"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn btn-secondary"
+                onclick="App.download()"
+                title="Save as JSON file"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="btn btn-secondary"
                 onclick="Viewer.expandAll()"
                 title="Expand All"
               >
@@ -697,6 +746,99 @@
       <span id="toastMsg">Notification</span>
     </div>
 
+    <!-- Type Gen Modal -->
+    <div
+      id="modalOverlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: var(--panel);
+          border: 1px solid var(--border);
+          border-radius: 16px;
+          width: 600px;
+          max-width: 90vw;
+          display: flex;
+          flex-direction: column;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        "
+      >
+        <div
+          style="
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          "
+        >
+          <span style="font-weight: 600; font-size: 16px">Generate Types</span>
+          <button
+            class="btn btn-secondary btn-icon"
+            onclick="
+              document.getElementById('modalOverlay').style.display = 'none'
+            "
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          style="
+            padding: 12px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.1);
+          "
+        >
+          <button class="btn btn-primary" onclick="App.generateType('ts')">
+            TypeScript
+          </button>
+          <button class="btn btn-secondary" onclick="App.generateType('go')">
+            Go Struct
+          </button>
+        </div>
+        <textarea
+          id="typeOutput"
+          style="
+            height: 300px;
+            padding: 16px;
+            font-family: &quot;JetBrains Mono&quot;;
+            font-size: 13px;
+            border: none;
+            resize: none;
+          "
+          readonly
+        ></textarea>
+        <div
+          style="
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+          "
+        >
+          <button
+            class="btn btn-secondary"
+            onclick="
+              Utils.copyToClipboard(document.getElementById('typeOutput').value)
+            "
+          >
+            Copy Code
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       /**
        * Core Application Logic
@@ -762,6 +904,36 @@
           inputArea.addEventListener("paste", () => {
             setTimeout(() => App.process(), 50);
           });
+
+          // Hotkeys
+          document.addEventListener("keydown", (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+              App.process();
+            }
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "f") {
+              e.preventDefault();
+              App.formatInput();
+            }
+          });
+        },
+
+        showTypeGen: () => {
+          if (!App.rawJson) return Utils.toast("No JSON data", "error");
+          document.getElementById("modalOverlay").style.display = "flex";
+          App.generateType("ts");
+        },
+
+        generateType: (lang) => {
+          try {
+            const data = JSON.parse(App.rawJson);
+            let output = "";
+            if (lang === "ts") output = TypeGen.toTypeScript(data);
+            if (lang === "go") output = TypeGen.toGo(data);
+            document.getElementById("typeOutput").value = output;
+          } catch (e) {
+            document.getElementById("typeOutput").value =
+              "// Error generating types";
+          }
         },
 
         process: () => {
@@ -865,6 +1037,18 @@
           throw new Error("Unable to parse JSON");
         },
 
+        download: () => {
+          if (!App.rawJson) return Utils.toast("Nothing to save", "error");
+          const blob = new Blob([App.rawJson], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `log_${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          Utils.toast("File saved!");
+        },
+
         // Recursively walk through object and try to parse strings that look like JSON
         deepParse: (data) => {
           if (typeof data === "string") {
@@ -943,7 +1127,18 @@
             };
             // Allow text searching on this node
             container.dataset.filterText = String(data).toLowerCase();
+            container.dataset.filterText = String(data).toLowerCase();
             container.appendChild(valEl);
+
+            // Smart Annotation (Timestamp / URL Decode)
+            const smartVal = Viewer.detectSmartValue(data);
+            if (smartVal) {
+              const metaEl = document.createElement("span");
+              metaEl.className = "meta-val";
+              metaEl.textContent = smartVal;
+              container.appendChild(metaEl);
+            }
+
             return container;
           }
 
@@ -1150,6 +1345,110 @@
           document
             .querySelectorAll(".meta")
             .forEach((el) => (el.style.display = "inline"));
+        },
+
+        detectSmartValue: (val) => {
+          if (!val) return null;
+          // Check for Unix Timestamp (Seconds or Milliseconds)
+          // Range: 2010 (1262304000) - 2040 (2208988800)
+          if (
+            typeof val === "number" ||
+            (typeof val === "string" && /^\d+$/.test(val))
+          ) {
+            const num = Number(val);
+            // Seconds
+            if (num > 1262304000 && num < 2208988800) {
+              return "🕒 " + new Date(num * 1000).toLocaleString();
+            }
+            // Milliseconds
+            if (num > 1262304000000 && num < 2208988800000) {
+              return "🕒 " + new Date(num).toLocaleString();
+            }
+          }
+          // Check for URL Encoded string containing JSON chars or just common encoded chars
+          if (typeof val === "string" && val.length > 5) {
+            // JWT Detection
+            if (/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/.test(val)) {
+              try {
+                const payload = val.split(".")[1];
+                const decoded = atob(
+                  payload.replace(/-/g, "+").replace(/_/g, "/"),
+                );
+                const json = JSON.parse(decoded);
+                return (
+                  "🔑 JWT: " + JSON.stringify(json).substring(0, 50) + "..."
+                );
+              } catch (e) {}
+            }
+
+            // URL Decode
+            if (val.includes("%")) {
+              try {
+                const decoded = decodeURIComponent(val);
+                if (decoded !== val && decoded.length < val.length) {
+                  return (
+                    "🔗 " +
+                    (decoded.length > 60
+                      ? decoded.substring(0, 60) + "..."
+                      : decoded)
+                  );
+                }
+              } catch (e) {}
+            }
+          }
+          return null;
+        },
+      };
+
+      /**
+       * Type Generator Logic
+       */
+      const TypeGen = {
+        toTypeScript: (obj) => {
+          const gen = (o, name) => {
+            if (Array.isArray(o)) {
+              const type = o.length > 0 ? typeof o[0] : "any";
+              return `interface ${name} {\n  items: ${type}[]\n}`;
+              // Simplified for array root. Real impl needs recursion.
+            }
+            if (typeof o === "object" && o !== null) {
+              let res = `interface ${name} {\n`;
+              Object.entries(o).forEach(([k, v]) => {
+                let type = typeof v;
+                if (v === null) type = "any";
+                else if (Array.isArray(v)) {
+                  const itemType = v.length > 0 ? typeof v[0] : "any";
+                  type = itemType === "object" ? "any[]" : itemType + "[]"; // Simplified
+                } else if (type === "object") {
+                  type = "Record<string, any>"; // Simplified nesting
+                }
+                res += `  ${k}: ${type};\n`;
+              });
+              res += `}`;
+              return res;
+            }
+            return `type ${name} = ${typeof o};`;
+          };
+          return gen(obj, "Root");
+        },
+        toGo: (obj) => {
+          const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+          const gen = (o, name) => {
+            if (typeof o === "object" && o !== null && !Array.isArray(o)) {
+              let res = `type ${name} struct {\n`;
+              Object.entries(o).forEach(([k, v]) => {
+                let type = "interface{}";
+                if (typeof v === "string") type = "string";
+                if (typeof v === "number") type = "float64";
+                if (typeof v === "boolean") type = "bool";
+                res += `\t${capitalize(k)} ${type} \`json:"${k}"\`\n`;
+              });
+              res += `}`;
+              return res;
+            }
+            return `// Complex struct generation unavailable in Lite mode`;
+          };
+          return gen(obj, "Root");
         },
       };
 
